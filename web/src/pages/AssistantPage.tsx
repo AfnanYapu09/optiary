@@ -10,24 +10,12 @@ export default function AssistantPage() {
   const question = params.get("q") ?? undefined;
 
   return (
-    <div style={{ flex: 1, display: "flex", minHeight: 0, background: "var(--bg)" }}>
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          maxWidth: 900,
-          margin: "0 auto",
-          display: "flex",
-          borderLeft: "1px solid var(--line)",
-          borderRight: "1px solid var(--line)",
-        }}
-      >
-        <AssistantPanel
-          thread="global"
-          subtitle="เห็นภาพ โน้ต และตัวเลขทั้งหมดของคุณ"
-          initialQuestion={question}
-        />
-      </div>
+    <div className="assistant-page">
+      <AssistantPanel
+        thread="global"
+        subtitle="เห็นภาพ โน้ต และตัวเลขทั้งหมดของคุณ"
+        initialQuestion={question}
+      />
     </div>
   );
 }

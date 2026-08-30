@@ -162,3 +162,38 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Full-page assistant: one centred column that fills the available height. */
+.assistant-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+.assistant-page > .assistant {
+  flex: 1;
+  min-width: 0;
+  max-width: 880px;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+.assistant-page .bubble {
+  max-width: 68%;
+}
+.assistant-page .bubble.user {
+  max-width: 62%;
+}
+
+@media (max-width: 900px) {
+  .assistant-page > .assistant {
+    border-left: none;
+    border-right: none;
+  }
+  .assistant-page .bubble {
+    max-width: 90%;
+  }
+  .assistant-page .bubble.user {
+    max-width: 84%;
+  }
+}
