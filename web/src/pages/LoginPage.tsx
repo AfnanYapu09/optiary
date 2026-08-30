@@ -1,0 +1,158 @@
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { api } from "../lib/api.ts";
+import { useSession } from "../lib/session.tsx";
+import { useToast } from "../lib/toast.tsx";
+import "../styles/login.css";
+
+const BULLETS = [
+  "ปฏิทินติดตามความครบของข้อมูลรายวัน",
+  "AI Chatbot ช่วยจด อ่านภาพ และตอบคำถามจากข้อมูลเก่า",
+  "เทียบภาพข้ามช่วงเวลาและข้ามวันได้ 3 มุมมอง",
+];
+
+const ERRORS: Record<string, string> = {
+  state: "ลิงก์เข้าสู่ระบบหมดอายุ กรุณาลองใหม่",
+  denied: "ยกเลิกการเข้าสู่ระบบด้วย Google",
+  exchange: "เชื่อมต่อกับ Google ไม่สำเร็จ",
+};
+
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.8-2 5.1-4.4 6.7v5.6h7.1c4.2-3.8 6.6-9.5 6.6-16.3z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.6c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.8C7.9 41.1 15.4 46 24 46z"
+      />
+      <path fill="#FBBC05" d="M11.6 28c-.4-1.3-.7-2.6-.7-4s.3-2.7.7-4v-5.8H4.3A22 22 0 0 0 2 24c0 3.5.8 6.9 2.3 9.8l7.3-5.8z" />
+      <path
+        fill="#EA4335"
+        d="M24 10.5c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 3.9 30 2 24 2 15.4 2 7.9 6.9 4.3 14.2l7.3 5.8c1.7-5.2 6.6-9.5 12.4-9.5z"
+      />
+    </svg>
+  );
+}
+
+export default function LoginPage() {
+  const { config, refresh } = useSession();
+  const [params] = useSearchParams();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+
+  const returnTo = params.get("returnTo") ?? "/";
+  const error = params.get("error");
+  const googleReady = config?.google ?? false;
+
+  async function devLogin() {
+    setBusy(true);
+    try {
+      await api.devLogin(email.trim() || undefined);
+      await refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ", "err");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const signIn = (
+    <div className="login-form">
+      <div className="login-form-head">
+        <h2>เข้าสู่ระบบ</h2>
+        <p>ใช้บัญชี Google ของคุณ ระบบจะสร้างสมุดวิจัยให้อัตโนมัติในการเข้าครั้งแรก</p>
+      </div>
+
+      {error ? <p className="login-error">{ERRORS[error] ?? "เข้าสู่ระบบไม่สำเร็จ"}</p> : null}
+
+      <a
+        className={`google-btn${googleReady ? "" : " disabled"}`}
+        href={googleReady ? `/api/auth/google?returnTo=${encodeURIComponent(returnTo)}` : undefined}
+        aria-disabled={!googleReady}
+        onClick={(event) => {
+          if (!googleReady) event.preventDefault();
+        }}
+      >
+        <GoogleMark />
+        ดำเนินการต่อด้วย Google
+      </a>
+
+      {!googleReady ? (
+        <p className="login-hint">
+          ยังไม่ได้ตั้งค่า <code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code> บนเซิร์ฟเวอร์
+        </p>
+      ) : null}
+
+      {config?.devLogin ? (
+        <>
+          <div className="login-or">
+            <span />
+            <em>OR</em>
+            <span />
+          </div>
+          <div className="login-local">
+            <input
+              className="field"
+              placeholder="อีเมลของคุณ"
+              value={email}
+              type="email"
+              onChange={(event) => setEmail(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void devLogin();
+              }}
+            />
+            <button className="btn login-local-btn" disabled={busy} onClick={() => void devLogin()}>
+              {busy ? "กำลังเข้าสู่ระบบ…" : "เข้าใช้งานแบบทดลอง (เครื่องนี้)"}
+            </button>
+          </div>
+        </>
+      ) : null}
+
+      <p className="login-terms">
+        การเข้าสู่ระบบถือว่ายอมรับ <a href="#terms">เงื่อนไขการใช้งาน</a> และ{" "}
+        <a href="#privacy">นโยบายข้อมูลวิจัย</a> · ภาพทั้งหมดถูกเก็บเป็นส่วนตัว
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="login">
+      <section className="login-hero">
+        <div className="brand">
+          <span className="diamond login-mark" />
+          <b>OPTIARY</b>
+        </div>
+
+        <div className="login-pitch">
+          <h1>
+            บันทึกภาพตลาดทองคำ
+            <br />
+            <span>วันละ 5 ช่วงเวลา</span>
+            <br />
+            ให้กลายเป็นชุดข้อมูลวิจัย
+          </h1>
+          <p>
+            เก็บภาพ Intraday, OI และ OI Chg ของ GC ในทุกช่วงเวลา ให้ AI ช่วยถอดตัวเลข จดโน้ต
+            และสรุปออกมาเป็นกราฟเปรียบเทียบอัตโนมัติ
+          </p>
+          <ul>
+            {BULLETS.map((text) => (
+              <li key={text}>
+                <i />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <span className="login-footer mono">RESEARCH WORKSPACE · COMEX GC · v0.1</span>
+      </section>
+
+      <section className="login-panel">{signIn}</section>
+    </div>
+  );
+}

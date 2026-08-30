@@ -1,0 +1,355 @@
+.capture {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.capture-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 26px;
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+  flex: none;
+  flex-wrap: wrap;
+}
+.capture-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.capture-date {
+  font: 400 16px/1 var(--thai);
+  color: var(--ink);
+}
+.capture-datepick {
+  background: var(--fill);
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 11px;
+  color: var(--t-55);
+  color-scheme: dark;
+}
+
+.capture-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.capture-main {
+  flex: 1;
+  min-width: 0;
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+}
+
+.slot-steps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  flex: none;
+}
+.slot-step {
+  padding: 12px 13px;
+  border-radius: var(--radius);
+  background: var(--fill);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.slot-step:hover {
+  border-color: var(--gold-line);
+}
+.slot-step.active {
+  background: rgba(217, 178, 106, 0.1);
+  border-color: rgba(217, 178, 106, 0.4);
+}
+.slot-step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.slot-step-head b {
+  font: 500 13.5px/1 var(--thai);
+  color: var(--t-80);
+}
+.slot-step.active .slot-step-head b {
+  color: var(--gold);
+}
+.slot-step-head em {
+  font: 400 10px/1 var(--mono);
+  color: var(--t-35);
+  font-style: normal;
+}
+.slot-step-dots {
+  display: flex;
+  gap: 3px;
+}
+.slot-step-dots i {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  display: block;
+}
+
+.capture-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex: none;
+  flex-wrap: wrap;
+}
+.capture-title h2 {
+  margin: 0;
+  font: 400 20px/1 var(--thai);
+  color: var(--ink);
+}
+.capture-title span {
+  font-size: 11px;
+  color: var(--t-40);
+}
+
+.shot-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  flex: none;
+}
+
+.shot-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+.shot-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 16px;
+}
+.shot-cell-head > span:first-child {
+  font: 500 12px/1 var(--thai);
+  color: var(--t-80);
+}
+.shot-cell-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.shot-cell .shot {
+  padding: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.linkish.danger {
+  color: var(--red);
+}
+.linkish.danger:hover {
+  color: #f0a0a0;
+}
+
+.capture-lower {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 14px;
+  min-height: 260px;
+}
+.capture-note,
+.capture-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-height: 0;
+}
+
+.note-box {
+  flex: 1;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 14px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.note-box textarea {
+  flex: 1;
+  min-height: 96px;
+  border: none;
+  background: none;
+  outline: none;
+  resize: none;
+  font: 300 13px/1.85 var(--thai);
+  color: rgba(237, 234, 228, 0.78);
+}
+.note-box textarea::placeholder {
+  color: var(--t-30);
+}
+
+.note-tags {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.tag-chip {
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  font: 400 11px/1 var(--thai);
+  color: var(--t-60);
+  cursor: pointer;
+}
+.tag-chip:hover {
+  color: var(--red);
+}
+.tag-chip.gold {
+  background: var(--gold-fill-2);
+  color: var(--gold);
+}
+.tag-chip.gold:hover {
+  color: var(--gold-hi);
+}
+.tag-input {
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--fill-2);
+  border: 1px solid var(--gold-line);
+  outline: none;
+  font: 400 11px/1 var(--thai);
+  color: var(--ink);
+  width: 110px;
+}
+
+.metrics-box {
+  flex: 1;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+.metric-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.metric-row span {
+  flex: 1;
+  font: 300 12.5px/1 var(--thai);
+  color: var(--t-55);
+}
+.metric-row b {
+  font: 500 12.5px/1 var(--mono);
+}
+.metric-summary {
+  margin: 0;
+  padding: 11px 12px 4px;
+  font: 300 12px/1.75 var(--thai);
+  color: var(--t-45);
+  text-wrap: pretty;
+}
+
+.capture-aside {
+  width: 376px;
+  flex: none;
+  border-left: 1px solid var(--line);
+  display: flex;
+  min-height: 0;
+}
+.capture-aside > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1200px) {
+  .capture-aside {
+    width: 330px;
+  }
+  .capture-lower {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .capture-body {
+    flex-direction: column;
+  }
+  .capture-main {
+    padding: 16px;
+    overflow: visible;
+  }
+  .capture-bar {
+    padding: 12px 16px;
+  }
+  .capture-date {
+    font-size: 15px;
+  }
+  .slot-steps {
+    gap: 6px;
+  }
+  .slot-step {
+    padding: 9px 6px;
+    align-items: center;
+    border-radius: 9px;
+  }
+  .slot-step-head {
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+  .slot-step-head b {
+    font-size: 11.5px;
+  }
+  .slot-step-head em {
+    font-size: 8.5px;
+  }
+  .slot-step-dots {
+    width: 100%;
+  }
+  /* On phones the intraday capture leads, with OI and OI Chg paired below it. */
+  .shot-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .shot-row > :first-child {
+    grid-column: 1 / -1;
+  }
+  .shot-row > :first-child .shot,
+  .shot-row > :first-child .dropzone {
+    height: 132px !important;
+  }
+  .shot-row > :not(:first-child) .shot,
+  .shot-row > :not(:first-child) .dropzone {
+    height: 94px !important;
+  }
+  .capture-aside {
+    width: auto;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    min-height: 520px;
+  }
+}

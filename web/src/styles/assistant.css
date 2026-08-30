@@ -1,0 +1,164 @@
+.assistant {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--chrome);
+}
+
+.assistant-head {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.assistant-log {
+  flex: 1;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.bubble {
+  max-width: 90%;
+  padding: 13px 14px;
+  border-radius: 12px 12px 12px 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.bubble p {
+  margin: 0;
+  font: 300 13px/1.8 var(--thai);
+  color: var(--t-80);
+  text-wrap: pretty;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.bubble.user {
+  align-self: flex-end;
+  max-width: 82%;
+  border-radius: 12px 12px 4px 12px;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: transparent;
+  padding: 12px 14px;
+}
+.bubble.user p {
+  color: rgba(237, 234, 228, 0.85);
+  line-height: 1.75;
+}
+.bubble.ai {
+  background: linear-gradient(160deg, rgba(217, 178, 106, 0.12), rgba(217, 178, 106, 0.03));
+  border-color: rgba(217, 178, 106, 0.2);
+}
+.bubble.ai p {
+  color: rgba(237, 234, 228, 0.85);
+}
+
+.bubble-actions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 6px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--line-3);
+  background: transparent;
+  font: 400 11.5px/1.4 var(--thai);
+  color: var(--t-60);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover:not(:disabled) {
+  border-color: var(--gold-line);
+  color: var(--gold);
+}
+.chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.chip.gold {
+  background: rgba(217, 178, 106, 0.16);
+  border-color: transparent;
+  color: var(--gold);
+  cursor: default;
+  white-space: normal;
+}
+
+.assistant-activity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font: 300 12px/1 var(--thai);
+  color: var(--t-45);
+  padding-left: 2px;
+}
+
+.assistant-compose {
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: none;
+}
+
+.assistant-suggestions {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.assistant-suggestions .chip {
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-weight: 300;
+  font-size: 11px;
+}
+
+.assistant-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--fill-2);
+  border: 1px solid var(--line-2);
+}
+.assistant-input input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font: 300 12.5px/1.4 var(--thai);
+  color: var(--ink);
+  min-width: 0;
+  padding: 2px 0;
+}
+.assistant-input input::placeholder {
+  color: var(--t-40);
+}
+.assistant-input button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 7px;
+  background: var(--gold);
+  color: var(--gold-ink);
+  font: 400 12px/1 var(--mono);
+  cursor: pointer;
+  flex: none;
+}
+.assistant-input button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

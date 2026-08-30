@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# Runtime state: SQLite database, uploaded screenshots, generated dev secret.
+server/data/
+*.tsbuildinfo
