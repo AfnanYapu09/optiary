@@ -165,6 +165,13 @@ export function seedDemoData(force = false): void {
     if (existing && existing.count > 0) return;
   }
 
+  // Restore the demo account's own identity as well, so a previous sign-in
+  // cannot leave the profile showing a different name or a stale Google link.
+  db.prepare("UPDATE users SET name = ?, google_sub = NULL, picture = NULL WHERE id = ?").run(
+    DEMO_NAME,
+    user.id,
+  );
+
   db.prepare("DELETE FROM images WHERE user_id = ?").run(user.id);
   db.prepare("DELETE FROM entries WHERE user_id = ?").run(user.id);
   db.prepare("DELETE FROM messages WHERE user_id = ?").run(user.id);

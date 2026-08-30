@@ -125,7 +125,7 @@ export default function SettingsPage() {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
               <span style={{ font: "400 16px/1.3 var(--thai)", color: "var(--ink)" }}>{user.name}</span>
               <span className="mono" style={{ fontSize: 11.5, color: "var(--t-40)", overflowWrap: "anywhere" }}>
-                {user.email} · {config?.google ? "เชื่อมต่อผ่าน Google" : "บัญชีในเครื่อง"}
+                {user.email} · {user.provider === "google" ? "เชื่อมต่อผ่าน Google" : "บัญชีทดลองในเครื่อง"}
               </span>
             </div>
             <button className="btn" onClick={() => void signOut()}>
@@ -182,12 +182,17 @@ export default function SettingsPage() {
           </section>
 
           <section id="sec-ai" className="settings-section">
-            <span className="eyebrow">ผู้ช่วย AI (Gemini 3.7 Flash) และข้อมูล</span>
-            {!config?.ai ? (
-              <p className="settings-warn">
-                ผู้ช่วย AI พร้อมทำงาน — ใช้โมเดล <code>Gemini 3.7 Flash</code>
+            <span className="eyebrow">ผู้ช่วย AI และข้อมูล</span>
+            {config?.ai ? (
+              <p className="settings-note">
+                ผู้ช่วย AI พร้อมทำงาน — ใช้โมเดล <code>{config.aiModel?.model}</code>
               </p>
-            ) : null}
+            ) : (
+              <p className="settings-warn">
+                ผู้ช่วย AI ยังใช้งานไม่ได้ — ตั้ง <code>GEMINI_API_KEY</code> หรือ{" "}
+                <code>ANTHROPIC_API_KEY</code> บนเซิร์ฟเวอร์ แล้วรีสตาร์ท
+              </p>
+            )}
             <div className="settings-rows">
               {PREFS.map((pref) => (
                 <div key={pref.key} className="pref-row">

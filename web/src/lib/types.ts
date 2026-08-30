@@ -98,6 +98,8 @@ export type User = {
   email: string;
   name: string;
   picture: string | null;
+  /** How this account signed in. */
+  provider: "google" | "local";
   settings: UserSettings;
 };
 
@@ -152,5 +154,8 @@ export type AuthConfig = {
   /** Browser-side Firebase popup sign-in is configured. */
   firebase: boolean;
   devLogin: boolean;
+  /** AI features can actually reach a provider. */
   ai: boolean;
+  /** Which provider and model are serving them, or null when unavailable. */
+  aiModel: { provider: "gemini" | "anthropic"; model: string } | null;
 };

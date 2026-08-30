@@ -28,9 +28,13 @@ export const config = {
     model: process.env.GEMINI_MODEL ?? "gemini-3.7-flash",
   },
 
+  /** Master switch for every AI feature, whichever provider is in use. */
+  ai: {
+    enabled: bool(process.env.AI_ENABLED, true),
+  },
+
   anthropic: {
     // The SDK reads ANTHROPIC_API_KEY (or an `ant auth login` profile) itself.
-    enabled: bool(process.env.AI_ENABLED, true),
     model: process.env.ANTHROPIC_MODEL ?? "claude-opus-5",
   },
 

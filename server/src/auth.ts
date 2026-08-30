@@ -12,6 +12,8 @@ export type User = {
   email: string;
   name: string;
   picture: string | null;
+  /** How this account signed in — a local demo account has no Google identity. */
+  provider: "google" | "local";
   settings: UserSettings;
 };
 
@@ -73,6 +75,7 @@ type UserRow = {
   email: string;
   name: string;
   picture: string | null;
+  google_sub: string | null;
   settings: string;
 };
 
@@ -83,12 +86,19 @@ function rowToUser(row: UserRow): User {
   } catch {
     settings = defaultSettings();
   }
-  return { id: row.id, email: row.email, name: row.name, picture: row.picture, settings };
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    picture: row.picture,
+    provider: row.google_sub ? "google" : "local",
+    settings,
+  };
 }
 
 export function getUser(id: string): User | null {
   const row = db
-    .prepare("SELECT id, email, name, picture, settings FROM users WHERE id = ?")
+    .prepare("SELECT id, email, name, picture, google_sub, settings FROM users WHERE id = ?")
     .get(id) as UserRow | undefined;
   return row ? rowToUser(row) : null;
 }
@@ -100,7 +110,7 @@ export function upsertGoogleUser(profile: {
   picture?: string;
 }): User {
   const existing = db
-    .prepare("SELECT id, email, name, picture, settings FROM users WHERE google_sub = ? OR email = ?")
+    .prepare("SELECT id, email, name, picture, google_sub, settings FROM users WHERE google_sub = ? OR email = ?")
     .get(profile.sub, profile.email) as UserRow | undefined;
 
   if (existing) {
@@ -110,7 +120,12 @@ export function upsertGoogleUser(profile: {
       profile.picture ?? null,
       existing.id,
     );
-    return rowToUser({ ...existing, name: profile.name, picture: profile.picture ?? null });
+    return rowToUser({
+      ...existing,
+      name: profile.name,
+      picture: profile.picture ?? null,
+      google_sub: profile.sub,
+    });
   }
 
   const id = profile.sub || uid();
@@ -131,7 +146,7 @@ export function upsertGoogleUser(profile: {
 /** Creates (or returns) the local demo account used when Google is not configured. */
 export function upsertLocalUser(email: string, name: string): User {
   const existing = db
-    .prepare("SELECT id, email, name, picture, settings FROM users WHERE email = ?")
+    .prepare("SELECT id, email, name, picture, google_sub, settings FROM users WHERE email = ?")
     .get(email) as UserRow | undefined;
   if (existing) return rowToUser(existing);
 

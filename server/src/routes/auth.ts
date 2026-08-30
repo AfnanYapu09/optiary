@@ -12,7 +12,7 @@ import {
   upsertLocalUser,
 } from "../auth.js";
 import { SLOTS } from "../domain.js";
-import { aiReady } from "../ai/client.js";
+import { activeAiModel, aiReady } from "../ai/client.js";
 import { FirebaseTokenError, verifyFirebaseIdToken } from "../firebase-token.js";
 
 export const authRoutes = Router();
@@ -24,6 +24,7 @@ authRoutes.get("/auth/config", (_req, res) => {
     firebase: firebaseAuthConfigured,
     devLogin: config.allowDevLogin,
     ai: aiReady(),
+    aiModel: activeAiModel(),
   });
 });
 

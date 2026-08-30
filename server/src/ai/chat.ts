@@ -270,7 +270,9 @@ export async function* streamChat(
     let finalText = "";
 
     for (let turn = 0; turn < 8; turn += 1) {
-      const response = await gemini.models.generateContent({
+      // Stream so text reaches the browser as it is produced, matching the
+      // Anthropic path — a whole turn arriving at once reads as a long stall.
+      const stream = await gemini.models.generateContentStream({
         model: GEMINI_MODEL,
         contents,
         config: {
@@ -279,18 +281,20 @@ export async function* streamChat(
         },
       });
 
-      const candidate = response.candidates?.[0];
-      const modelParts = candidate?.content?.parts ?? [];
+      const modelParts: any[] = [];
       const functionCalls: any[] = [];
       let turnText = "";
 
-      for (const part of modelParts) {
-        if (part.text) {
-          turnText += part.text;
-          yield { type: "text", text: part.text };
-        }
-        if (part.functionCall) {
-          functionCalls.push(part.functionCall);
+      for await (const chunk of stream) {
+        for (const part of chunk.candidates?.[0]?.content?.parts ?? []) {
+          modelParts.push(part);
+          if (part.text) {
+            turnText += part.text;
+            yield { type: "text", text: part.text };
+          }
+          if (part.functionCall) {
+            functionCalls.push(part.functionCall);
+          }
         }
       }
 
