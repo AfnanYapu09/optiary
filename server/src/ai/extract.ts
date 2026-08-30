@@ -89,6 +89,9 @@ export async function extractSlotMetrics(
       contents,
       config: {
         systemInstruction: SYSTEM,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

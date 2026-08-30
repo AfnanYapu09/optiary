@@ -42,9 +42,7 @@ export default function LoginPage() {
   const { config, refresh } = useSession();
   const [params] = useSearchParams();
   const toast = useToast();
-  const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
-  const [email, setEmail] = useState("");
 
   const error = params.get("error");
   const firebaseReady = config?.firebase ?? false;
@@ -89,23 +87,11 @@ export default function LoginPage() {
     }
   }
 
-  async function devLogin() {
-    setBusy(true);
-    try {
-      await api.devLogin(email.trim() || undefined);
-      await refresh();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ", "err");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const signIn = (
     <div className="login-form">
       <div className="login-form-head">
         <h2>เข้าสู่ระบบ</h2>
-        <p>ใช้บัญชี Google ของคุณ ข้อมูลจะถูกซิงค์และบันทึกออนไลน์บน Cloud Firestore อัตโนมัติ</p>
+        <p>เข้าใช้งานด้วยบัญชี Google เพื่อซิงค์และบันทึกข้อมูลวิจัยของคุณบน Cloud Firestore</p>
       </div>
 
       {error ? <p className="login-error">{ERRORS[error] ?? "เข้าสู่ระบบไม่สำเร็จ"}</p> : null}
@@ -118,7 +104,7 @@ export default function LoginPage() {
         onClick={() => void handleGoogleLogin()}
       >
         <GoogleMark />
-        {googleBusy ? "กำลังเชื่อมต่อกับ Google…" : "ดำเนินการต่อด้วย Google"}
+        {googleBusy ? "กำลังเชื่อมต่อกับ Google…" : "เข้าสู่ระบบด้วย Google"}
       </button>
 
       {config && !firebaseReady ? (
@@ -126,37 +112,6 @@ export default function LoginPage() {
           เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า Firebase — ตั้ง <code>FIREBASE_PROJECT_ID</code> หรือวางไฟล์{" "}
           <code>firebase-applet-config.json</code> เพื่อเปิดการเข้าสู่ระบบด้วย Google
         </p>
-      ) : null}
-
-      {config?.devLogin ? (
-        <>
-          <div className="login-or">
-            <span />
-            <em>OR</em>
-            <span />
-          </div>
-          <div className="login-local">
-            <input
-              id="dev-email-input"
-              className="field"
-              placeholder="อีเมลของคุณ (เช่น user@gmail.com)"
-              value={email}
-              type="email"
-              onChange={(event) => setEmail(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void devLogin();
-              }}
-            />
-            <button
-              id="dev-login-btn"
-              className="btn login-local-btn"
-              disabled={busy}
-              onClick={() => void devLogin()}
-            >
-              {busy ? "กำลังเข้าสู่ระบบ…" : "เข้าใช้งานแบบทดลอง (Local Demo)"}
-            </button>
-          </div>
-        </>
       ) : null}
 
       <p className="login-terms">

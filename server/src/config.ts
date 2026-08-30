@@ -43,7 +43,7 @@ export const config = {
    * defaults to off in production — a deployed instance must never be walked
    * into. Setting ALLOW_DEV_LOGIN=true there is an explicit, deliberate opt-in.
    */
-  allowDevLogin: bool(process.env.ALLOW_DEV_LOGIN, process.env.NODE_ENV !== "production"),
+  allowDevLogin: false,
 
   sessionSecret: process.env.SESSION_SECRET ?? "",
   sessionMaxAgeMs: 1000 * 60 * 60 * 24 * 30,
