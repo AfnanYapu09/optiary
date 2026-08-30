@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information and research preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "email": { "type": "string", "format": "email", "description": "User email" },
+        "name": { "type": "string", "description": "Display name", "maxLength": 100 },
+        "settings": {
+          "type": "object",
+          "description": "Research preferences"
+        },
+        "createdAt": { "type": "string", "description": "ISO timestamp" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["userId", "email", "name", "createdAt", "updatedAt"]
+    },
+    "DayEntry": {
+      "title": "DayEntry",
+      "description": "Research entry and notes for a specific trading session slot",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "Date in YYYY-MM-DD format" },
+        "slot": { "type": "string", "enum": ["morning", "afternoon", "evening", "night", "latenight"], "description": "Trading session slot" },
+        "note": { "type": "string", "maxLength": 5000, "description": "User research notes" },
+        "tags": { "type": "array", "description": "List of tags associated with this session" },
+        "metrics": { "type": "object", "description": "Extracted option metrics and analysis" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["userId", "date", "slot", "updatedAt"]
+    },
+    "SessionImage": {
+      "title": "SessionImage",
+      "description": "Captured screenshot for GC data research",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "Date in YYYY-MM-DD" },
+        "slot": { "type": "string", "enum": ["morning", "afternoon", "evening", "night", "latenight"], "description": "Trading session slot" },
+        "kind": { "type": "string", "enum": ["intraday", "oi", "oichg"], "description": "Type of screenshot" },
+        "mime": { "type": "string", "description": "MIME type of the image" },
+        "dataUrl": { "type": "string", "description": "Base64 data or image storage reference" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["userId", "date", "slot", "kind", "mime", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Interactive AI research assistant chat message",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "role": { "type": "string", "enum": ["user", "assistant"], "description": "Message author role" },
+        "content": { "type": "string", "maxLength": 10000, "description": "Text content of the message" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["userId", "role", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "User profile records"
+    },
+    "/users/{userId}/entries/{entryId}": {
+      "schema": { "$ref": "DayEntry" },
+      "description": "Session research entries and notes for a user"
+    },
+    "/users/{userId}/images/{imageId}": {
+      "schema": { "$ref": "SessionImage" },
+      "description": "Screenshots and charts uploaded by a user"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": { "$ref": "ChatMessage" },
+      "description": "AI research assistant conversation history"
+    }
+  }
+}

@@ -32,6 +32,24 @@ authRoutes.get("/me", (req, res) => {
   res.json({ user: req.user, slots: SLOTS });
 });
 
+authRoutes.post("/auth/firebase-login", (req, res) => {
+  const { sub, uid, email, name, picture } = req.body ?? {};
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "email is required" });
+    return;
+  }
+  const googleSub = String(sub || uid || email);
+  const displayName = String(name || email.split("@")[0]);
+  const user = upsertGoogleUser({
+    sub: googleSub,
+    email,
+    name: displayName,
+    picture: picture ? String(picture) : undefined,
+  });
+  setSessionCookie(res, user.id);
+  res.json({ user, slots: SLOTS });
+});
+
 authRoutes.get("/auth/google", (req, res) => {
   if (!googleConfigured) {
     res.status(503).json({ error: "google_not_configured" });

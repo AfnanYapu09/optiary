@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api.ts";
 import { useSession } from "../lib/session.tsx";
 import { useToast } from "../lib/toast.tsx";
+import { signInWithGoogle, saveUserProfileToCloud } from "../lib/firebase.ts";
 import "../styles/login.css";
 
 const BULLETS = [
@@ -42,11 +43,39 @@ export default function LoginPage() {
   const [params] = useSearchParams();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [email, setEmail] = useState("");
 
-  const returnTo = params.get("returnTo") ?? "/";
   const error = params.get("error");
-  const googleReady = config?.google ?? false;
+
+  async function handleGoogleLogin() {
+    setGoogleBusy(true);
+    try {
+      const fbUser = await signInWithGoogle();
+      const idToken = await fbUser.getIdToken();
+      const loginRes = await api.firebaseLogin({
+        sub: fbUser.uid,
+        uid: fbUser.uid,
+        email: fbUser.email ?? "user@gmail.com",
+        name: fbUser.displayName ?? fbUser.email?.split("@")[0] ?? "Google User",
+        picture: fbUser.photoURL ?? undefined,
+        idToken,
+      });
+      // Save profile in Cloud Firestore
+      if (loginRes?.user) {
+        await saveUserProfileToCloud(loginRes.user);
+      }
+      await refresh();
+      toast("เข้าสู่ระบบด้วย Google สำเร็จ!", "ok");
+    } catch (err: any) {
+      console.error(err);
+      if (err?.code !== "auth/popup-closed-by-user") {
+        toast(err instanceof Error ? err.message : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ", "err");
+      }
+    } finally {
+      setGoogleBusy(false);
+    }
+  }
 
   async function devLogin() {
     setBusy(true);
@@ -64,28 +93,21 @@ export default function LoginPage() {
     <div className="login-form">
       <div className="login-form-head">
         <h2>เข้าสู่ระบบ</h2>
-        <p>ใช้บัญชี Google ของคุณ ระบบจะสร้างสมุดวิจัยให้อัตโนมัติในการเข้าครั้งแรก</p>
+        <p>ใช้บัญชี Google ของคุณ ข้อมูลจะถูกซิงค์และบันทึกออนไลน์บน Cloud Firestore อัตโนมัติ</p>
       </div>
 
       {error ? <p className="login-error">{ERRORS[error] ?? "เข้าสู่ระบบไม่สำเร็จ"}</p> : null}
 
-      <a
-        className={`google-btn${googleReady ? "" : " disabled"}`}
-        href={googleReady ? `/api/auth/google?returnTo=${encodeURIComponent(returnTo)}` : undefined}
-        aria-disabled={!googleReady}
-        onClick={(event) => {
-          if (!googleReady) event.preventDefault();
-        }}
+      <button
+        type="button"
+        id="google-login-btn"
+        className="google-btn"
+        disabled={googleBusy}
+        onClick={() => void handleGoogleLogin()}
       >
         <GoogleMark />
-        ดำเนินการต่อด้วย Google
-      </a>
-
-      {!googleReady ? (
-        <p className="login-hint">
-          ยังไม่ได้ตั้งค่า <code>GOOGLE_CLIENT_ID</code> / <code>GOOGLE_CLIENT_SECRET</code> บนเซิร์ฟเวอร์
-        </p>
-      ) : null}
+        {googleBusy ? "กำลังเชื่อมต่อกับ Google…" : "ดำเนินการต่อด้วย Google"}
+      </button>
 
       {config?.devLogin ? (
         <>
@@ -96,8 +118,9 @@ export default function LoginPage() {
           </div>
           <div className="login-local">
             <input
+              id="dev-email-input"
               className="field"
-              placeholder="อีเมลของคุณ"
+              placeholder="อีเมลของคุณ (เช่น user@gmail.com)"
               value={email}
               type="email"
               onChange={(event) => setEmail(event.target.value)}
@@ -105,8 +128,13 @@ export default function LoginPage() {
                 if (event.key === "Enter") void devLogin();
               }}
             />
-            <button className="btn login-local-btn" disabled={busy} onClick={() => void devLogin()}>
-              {busy ? "กำลังเข้าสู่ระบบ…" : "เข้าใช้งานแบบทดลอง (เครื่องนี้)"}
+            <button
+              id="dev-login-btn"
+              className="btn login-local-btn"
+              disabled={busy}
+              onClick={() => void devLogin()}
+            >
+              {busy ? "กำลังเข้าสู่ระบบ…" : "เข้าใช้งานแบบทดลอง (Local Demo)"}
             </button>
           </div>
         </>
@@ -114,7 +142,7 @@ export default function LoginPage() {
 
       <p className="login-terms">
         การเข้าสู่ระบบถือว่ายอมรับ <a href="#terms">เงื่อนไขการใช้งาน</a> และ{" "}
-        <a href="#privacy">นโยบายข้อมูลวิจัย</a> · ภาพทั้งหมดถูกเก็บเป็นส่วนตัว
+        <a href="#privacy">นโยบายข้อมูลวิจัย</a> · ภาพและข้อมูลทั้งหมดถูกเก็บอย่างปลอดภัยบน Cloud
       </p>
     </div>
   );

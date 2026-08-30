@@ -6,6 +6,7 @@ import { useToast } from "../lib/toast.tsx";
 import ShotCell from "../components/ShotCell.tsx";
 import AssistantPanel from "../components/AssistantPanel.tsx";
 import { fullThaiDate, num, signed, todayIso } from "../lib/format.ts";
+import { syncEntryToCloud } from "../lib/firebase.ts";
 import {
   IMAGE_KINDS,
   SLOTS,
@@ -82,17 +83,20 @@ export default function CapturePage() {
       saveTimer.current = window.setTimeout(() => {
         api
           .saveEntry(date, activeSlot, { note: value })
-          .then((saved) =>
+          .then((saved) => {
             setDay((current) =>
               current
                 ? { ...current, slots: current.slots.map((s) => (s.slot === activeSlot ? saved : s)) }
                 : current,
-            ),
-          )
+            );
+            if (user?.id) {
+              void syncEntryToCloud(user.id, date, activeSlot, { note: value });
+            }
+          })
           .catch((error) => toast(error instanceof Error ? error.message : "บันทึกโน้ตไม่สำเร็จ", "err"));
       }, 700);
     },
-    [activeSlot, date, toast],
+    [activeSlot, date, toast, user?.id],
   );
 
   useEffect(() => () => {
@@ -140,12 +144,19 @@ export default function CapturePage() {
           : current,
       );
       toast(`AI ถอดตัวเลขแล้ว (ความมั่นใจ ${result.confidence})`, "ok");
+      if (user?.id) {
+        void syncEntryToCloud(user.id, date, activeSlot, {
+          note: result.entry.note,
+          tags: result.entry.tags,
+          metrics: result.entry.metrics,
+        });
+      }
     } catch (error) {
       toast(error instanceof Error ? error.message : "ถอดตัวเลขไม่สำเร็จ", "err");
     } finally {
       setExtracting(false);
     }
-  }, [activeSlot, date, toast]);
+  }, [activeSlot, date, toast, user?.id]);
 
   const addTag = useCallback(async () => {
     const value = tagDraft.trim().replace(/^#*/, "");
@@ -160,29 +171,37 @@ export default function CapturePage() {
       setTagDraft("");
       return;
     }
-    const saved = await api.saveEntry(date, activeSlot, { tags: [...entry.tags, tag] });
+    const newTags = [...entry.tags, tag];
+    const saved = await api.saveEntry(date, activeSlot, { tags: newTags });
     setDay((current) =>
       current
         ? { ...current, slots: current.slots.map((s) => (s.slot === activeSlot ? saved : s)) }
         : current,
     );
+    if (user?.id) {
+      void syncEntryToCloud(user.id, date, activeSlot, { tags: newTags });
+    }
     setAddingTag(false);
     setTagDraft("");
-  }, [activeSlot, date, entry, tagDraft]);
+  }, [activeSlot, date, entry, tagDraft, user?.id]);
 
   const removeTag = useCallback(
     async (tag: string) => {
       if (!entry) return;
+      const newTags = entry.tags.filter((t) => t !== tag);
       const saved = await api.saveEntry(date, activeSlot, {
-        tags: entry.tags.filter((t) => t !== tag),
+        tags: newTags,
       });
       setDay((current) =>
         current
           ? { ...current, slots: current.slots.map((s) => (s.slot === activeSlot ? saved : s)) }
           : current,
       );
+      if (user?.id) {
+        void syncEntryToCloud(user.id, date, activeSlot, { tags: newTags });
+      }
     },
-    [activeSlot, date, entry],
+    [activeSlot, date, entry, user?.id],
   );
 
   const canExtract = entry ? Object.keys(entry.images).length > 0 : false;

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, streamChat } from "../lib/api.ts";
+import { useSession } from "../lib/session.tsx";
 import { useToast } from "../lib/toast.tsx";
+import { saveChatMessageToCloud } from "../lib/firebase.ts";
 import { slotDef, type ChatMessage, type SlotId } from "../lib/types.ts";
 import "../styles/assistant.css";
 
@@ -31,6 +33,7 @@ export default function AssistantPanel({
   initialQuestion,
 }: Props) {
   const toast = useToast();
+  const { user } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -70,6 +73,9 @@ export default function AssistantPanel({
           createdAt: new Date().toISOString(),
         },
       ]);
+      if (user?.id) {
+        void saveChatMessageToCloud(user.id, "user", message);
+      }
 
       let answer = "";
       const saved: Array<{ date: string; slot: SlotId }> = [];
@@ -114,9 +120,12 @@ export default function AssistantPanel({
             createdAt: new Date().toISOString(),
           },
         ]);
+        if (user?.id) {
+          void saveChatMessageToCloud(user.id, "assistant", answer);
+        }
       }
     },
-    [onNoteSaved, slot, streaming, thread, toast],
+    [onNoteSaved, slot, streaming, thread, toast, user?.id],
   );
 
   useEffect(() => {

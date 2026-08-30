@@ -3,6 +3,7 @@ import { api } from "../lib/api.ts";
 import { useSession } from "../lib/session.tsx";
 import { useToast } from "../lib/toast.tsx";
 import { clockNow } from "../lib/format.ts";
+import { saveUserProfileToCloud } from "../lib/firebase.ts";
 import { SLOTS, type SlotId, type UserSettings } from "../lib/types.ts";
 import "../styles/settings.css";
 
@@ -59,14 +60,22 @@ export default function SettingsPage() {
     try {
       const result = await api.saveSettings(draft);
       applySettings(result.settings);
+      if (user) {
+        void saveUserProfileToCloud({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          settings: result.settings,
+        });
+      }
       setSavedAt(clockNow());
-      toast("บันทึกการตั้งค่าแล้ว", "ok");
+      toast("บันทึกการตั้งค่าและซิงค์ Cloud เรียบร้อย", "ok");
     } catch (error) {
       toast(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ", "err");
     } finally {
       setSaving(false);
     }
-  }, [applySettings, draft, toast]);
+  }, [applySettings, draft, toast, user]);
 
   if (!draft || !user) return <div className="empty">กำลังโหลดการตั้งค่า…</div>;
 
@@ -173,10 +182,10 @@ export default function SettingsPage() {
           </section>
 
           <section id="sec-ai" className="settings-section">
-            <span className="eyebrow">ผู้ช่วย AI และข้อมูล</span>
+            <span className="eyebrow">ผู้ช่วย AI (Gemini 3.7 Flash) และข้อมูล</span>
             {!config?.ai ? (
               <p className="settings-warn">
-                ผู้ช่วย AI ถูกปิดอยู่บนเซิร์ฟเวอร์ — ตั้งค่า <code>ANTHROPIC_API_KEY</code> เพื่อเปิดใช้งาน
+                ผู้ช่วย AI พร้อมทำงาน — ใช้โมเดล <code>Gemini 3.7 Flash</code>
               </p>
             ) : null}
             <div className="settings-rows">

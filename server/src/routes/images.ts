@@ -32,7 +32,8 @@ imageRoutes.get("/library", (req, res) => {
 });
 
 imageRoutes.get("/images/:id/file", (req, res) => {
-  const file = getImageFile(req.user!.id, req.params.id);
+  const id = String(req.params.id ?? "");
+  const file = getImageFile(req.user!.id, id);
   if (!file) {
     res.status(404).json({ error: "not_found" });
     return;
@@ -42,8 +43,10 @@ imageRoutes.get("/images/:id/file", (req, res) => {
   res.sendFile(file.absolutePath);
 });
 
-imageRoutes.post("/images/:date/:slot/:kind", upload.single("file"), async (req, res) => {
-  const { date, slot, kind } = req.params;
+imageRoutes.post("/images/:date/:slot/:kind", upload.single("file") as any, async (req, res) => {
+  const date = String(req.params.date ?? "");
+  const slot = String(req.params.slot ?? "");
+  const kind = String(req.params.kind ?? "");
   if (!isDateString(date) || !isSlotId(slot) || !isImageKind(kind)) {
     res.status(400).json({ error: "bad date, slot or kind" });
     return;
@@ -75,7 +78,8 @@ imageRoutes.post("/images/:date/:slot/:kind", upload.single("file"), async (req,
 });
 
 imageRoutes.delete("/images/:id", (req, res) => {
-  if (!deleteImage(req.user!.id, req.params.id)) {
+  const id = String(req.params.id ?? "");
+  if (!deleteImage(req.user!.id, id)) {
     res.status(404).json({ error: "not_found" });
     return;
   }
@@ -83,7 +87,8 @@ imageRoutes.delete("/images/:id", (req, res) => {
 });
 
 imageRoutes.post("/extract/:date/:slot", async (req, res) => {
-  const { date, slot } = req.params;
+  const date = String(req.params.date ?? "");
+  const slot = String(req.params.slot ?? "");
   if (!isDateString(date) || !isSlotId(slot)) {
     res.status(400).json({ error: "bad date or slot" });
     return;

@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { anthropic, MODEL } from "./client.js";
+import { FunctionDeclaration, Type } from "@google/genai";
+import { anthropic, getAiProvider, getGemini, GEMINI_MODEL, MODEL } from "./client.js";
 import { SLOTS, isSlotId, type SlotId } from "../domain.js";
 import { appendNote, getDay, getSeries, getStreak } from "../store.js";
 import { db } from "../db.js";
@@ -19,7 +20,7 @@ const SYSTEM = `คุณคือ "ผู้ช่วยวิจัย" ขอ
 - เมื่อจะบันทึกโน้ต ให้บันทึกจริงด้วย save_note แล้วบอกผู้ใช้ว่าบันทึกลงวันไหน ช่วงไหน
 - ระบุวันที่แบบ YYYY-MM-DD และช่วงเวลาด้วย id: morning, afternoon, evening, night, latenight`;
 
-const TOOLS: Anthropic.Tool[] = [
+const ANTHROPIC_TOOLS: Anthropic.Tool[] = [
   {
     name: "get_day",
     description:
@@ -80,6 +81,68 @@ const TOOLS: Anthropic.Tool[] = [
       additionalProperties: false,
     },
     strict: true,
+  },
+];
+
+const GEMINI_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
+  {
+    name: "get_day",
+    description:
+      "อ่านบันทึกทั้งวันของผู้ใช้: โน้ต แท็ก ตัวเลขที่ถอดจากภาพ และรายการภาพที่มีในแต่ละช่วงเวลา",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { date: { type: Type.STRING, description: "วันที่รูปแบบ YYYY-MM-DD" } },
+      required: ["date"],
+    },
+  },
+  {
+    name: "search_notes",
+    description:
+      "ค้นหาบันทึกย้อนหลังจากคำค้น แท็ก หรือช่วงเวลา คืนค่าเรียงจากใหม่ไปเก่า ใช้เมื่อผู้ใช้ถามถึงวันก่อน ๆ หรือรูปแบบที่เคยเจอ",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING, description: "คำค้นในโน้ต เว้นว่างได้" },
+        slot: {
+          type: Type.STRING,
+          enum: [...SLOTS.map((s) => s.id), ""],
+          description: "จำกัดเฉพาะช่วงเวลา เว้นว่างเพื่อค้นทุกช่วง",
+        },
+        limit: { type: Type.INTEGER, description: "จำนวนผลลัพธ์สูงสุด 1–40" },
+      },
+      required: ["query", "slot", "limit"],
+    },
+  },
+  {
+    name: "get_stats",
+    description:
+      "ดึงชุดตัวเลขรายช่วงเวลาย้อนหลัง N วัน (ราคาปิดช่วง, OI รวม, OI Chg, P/C ratio) สำหรับหาแนวโน้มหรือค่าเฉลี่ย",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { days: { type: Type.INTEGER, description: "จำนวนวันย้อนหลัง 1–90" } },
+      required: ["days"],
+    },
+  },
+  {
+    name: "save_note",
+    description:
+      "บันทึกข้อความต่อท้ายโน้ตของวันและช่วงเวลาที่ระบุ ใช้เมื่อผู้ใช้ขอให้จด สรุป หรือเก็บสมมติฐานไว้",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        date: { type: Type.STRING, description: "วันที่รูปแบบ YYYY-MM-DD" },
+        slot: { type: Type.STRING, enum: SLOTS.map((s) => s.id), description: "ช่วงเวลา" },
+        text: { type: Type.STRING, description: "ข้อความที่จะบันทึก เขียนเป็นภาษาไทย" },
+        tag: { type: Type.STRING, description: "แท็กที่จะติด เช่น #สมมติฐาน-ค่ำ เว้นว่างได้" },
+      },
+      required: ["date", "slot", "text", "tag"],
+    },
+  },
+];
+
+const GEMINI_TOOLS = [
+  {
+    functionDeclarations: GEMINI_FUNCTION_DECLARATIONS,
   },
 ];
 
@@ -180,20 +243,101 @@ export type ChatContext = {
 
 /**
  * Runs the research assistant to completion, yielding SSE-ready events. Tool
- * calls are executed between turns; the loop ends when Claude stops asking.
+ * calls are executed between turns; the loop ends when the model finishes.
  */
 export async function* streamChat(
   userId: string,
-  history: Anthropic.MessageParam[],
+  history: Array<{ role: string; content: string | any }>,
   context: ChatContext,
 ): AsyncGenerator<ChatEvent> {
-  const messages: Anthropic.MessageParam[] = [...history];
+  const provider = getAiProvider();
   const today = new Date().toISOString().slice(0, 10);
   const contextLines = [
     `วันนี้คือ ${today}`,
     context.date ? `ผู้ใช้กำลังดูบันทึกของวันที่ ${context.date}` : null,
     context.slot ? `ช่วงเวลาที่เปิดอยู่คือ ${context.slot}` : null,
   ].filter(Boolean);
+
+  const systemInstruction = `${SYSTEM}\n\nบริบทปัจจุบัน:\n${contextLines.join("\n")}`;
+
+  if (provider === "gemini") {
+    const gemini = getGemini();
+    const contents: any[] = history.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: typeof m.content === "string" ? [{ text: m.content }] : m.content,
+    }));
+
+    let finalText = "";
+
+    for (let turn = 0; turn < 8; turn += 1) {
+      const response = await gemini.models.generateContent({
+        model: GEMINI_MODEL,
+        contents,
+        config: {
+          systemInstruction,
+          tools: GEMINI_TOOLS,
+        },
+      });
+
+      const candidate = response.candidates?.[0];
+      const modelParts = candidate?.content?.parts ?? [];
+      const functionCalls: any[] = [];
+      let turnText = "";
+
+      for (const part of modelParts) {
+        if (part.text) {
+          turnText += part.text;
+          yield { type: "text", text: part.text };
+        }
+        if (part.functionCall) {
+          functionCalls.push(part.functionCall);
+        }
+      }
+
+      if (turnText) finalText += turnText;
+      contents.push({ role: "model", parts: modelParts });
+
+      if (functionCalls.length === 0) {
+        yield { type: "done", text: finalText };
+        return;
+      }
+
+      const functionResponseParts: any[] = [];
+      for (const fc of functionCalls) {
+        yield { type: "tool", name: fc.name };
+        try {
+          const outcome = runTool(userId, fc.name, fc.args as Record<string, unknown>);
+          if (outcome.sideEffect?.type === "note-saved") {
+            yield { type: "note-saved", date: outcome.sideEffect.date, slot: outcome.sideEffect.slot };
+          }
+          functionResponseParts.push({
+            functionResponse: {
+              name: fc.name,
+              response: { result: outcome.result },
+            },
+          });
+        } catch (error) {
+          functionResponseParts.push({
+            functionResponse: {
+              name: fc.name,
+              response: { error: error instanceof Error ? error.message : "tool failed" },
+            },
+          });
+        }
+      }
+
+      contents.push({ role: "user", parts: functionResponseParts });
+    }
+
+    yield { type: "done", text: finalText };
+    return;
+  }
+
+  // Anthropic fallback
+  const messages: Anthropic.MessageParam[] = history.map((m) => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: m.content,
+  }));
 
   let finalText = "";
 
@@ -206,7 +350,7 @@ export async function* streamChat(
         { type: "text", text: contextLines.join("\n") },
       ],
       thinking: { type: "adaptive" },
-      tools: TOOLS,
+      tools: ANTHROPIC_TOOLS,
       messages,
     });
 

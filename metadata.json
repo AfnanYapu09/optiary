@@ -1,0 +1,6 @@
+{
+  "name": "Optiary",
+  "description": "Option & Gold Futures (GC) Data Research Diary and Analysis Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

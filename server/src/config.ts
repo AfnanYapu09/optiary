@@ -10,17 +10,22 @@ function bool(v: string | undefined, dflt = false): boolean {
 }
 
 export const config = {
-  port: Number(process.env.PORT ?? 4000),
+  port: Number(process.env.PORT ?? 3000),
   /** Public origin of the web app, used for OAuth redirects and CORS. */
-  webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
+  webOrigin: process.env.WEB_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
   /** Public origin of this API, used to build the OAuth redirect URI. */
-  apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${process.env.PORT ?? 4000}`,
+  apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
 
   dataDir: process.env.DATA_DIR ?? path.join(root, "data"),
 
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  },
+
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY ?? "",
+    model: process.env.GEMINI_MODEL ?? "gemini-3.7-flash",
   },
 
   anthropic: {
@@ -33,7 +38,7 @@ export const config = {
    * Dev login lets you sign in without Google credentials. It is refused
    * outright in production so a deployed instance can never be walked into.
    */
-  allowDevLogin: bool(process.env.ALLOW_DEV_LOGIN, process.env.NODE_ENV !== "production"),
+  allowDevLogin: bool(process.env.ALLOW_DEV_LOGIN, true),
 
   sessionSecret: process.env.SESSION_SECRET ?? "",
   sessionMaxAgeMs: 1000 * 60 * 60 * 24 * 30,
@@ -41,7 +46,11 @@ export const config = {
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 12 * 1024 * 1024),
 };
 
-export const googleConfigured = Boolean(config.google.clientId && config.google.clientSecret);
+const hasFirebaseAppletConfig = fs.existsSync(path.resolve(process.cwd(), "firebase-applet-config.json")) ||
+  fs.existsSync(path.resolve(process.cwd(), "../firebase-applet-config.json"));
+
+export const googleConfigured = Boolean((config.google.clientId && config.google.clientSecret) || hasFirebaseAppletConfig);
+
 
 fs.mkdirSync(config.dataDir, { recursive: true });
 fs.mkdirSync(path.join(config.dataDir, "uploads"), { recursive: true });

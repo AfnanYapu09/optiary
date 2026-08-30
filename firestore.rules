@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId == userId &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.createdAt is string && data.createdAt.size() <= 50 &&
+        data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    function isValidDayEntry(data, userId) {
+      return data.userId == userId &&
+        data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        data.slot is string && data.slot in ['morning', 'afternoon', 'evening', 'night', 'latenight'] &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 5000)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 20)) &&
+        data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    function isValidSessionImage(data, userId) {
+      return data.userId == userId &&
+        data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+        data.slot is string && data.slot in ['morning', 'afternoon', 'evening', 'night', 'latenight'] &&
+        data.kind is string && data.kind in ['intraday', 'oi', 'oichg'] &&
+        data.mime is string && data.mime.size() <= 50 &&
+        data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidChatMessage(data, userId) {
+      return data.userId == userId &&
+        data.role is string && data.role in ['user', 'assistant'] &&
+        data.content is string && data.content.size() <= 10000 &&
+        data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    // User Profile
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt;
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // User Entries
+      match /entries/{entryId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(entryId) && isValidDayEntry(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(entryId) && isValidDayEntry(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().date == existing().date &&
+          incoming().slot == existing().slot;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+      }
+
+      // User Images
+      match /images/{imageId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(imageId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(imageId) && isValidSessionImage(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(imageId) && isValidSessionImage(incoming(), userId) &&
+          incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(imageId);
+      }
+
+      // Chat Messages
+      match /messages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(messageId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(messageId) && isValidChatMessage(incoming(), userId);
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(messageId);
+      }
+    }
+  }
+}

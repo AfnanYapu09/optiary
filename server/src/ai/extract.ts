@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { anthropic, MODEL } from "./client.js";
+import { Type } from "@google/genai";
+import { anthropic, getAiProvider, getGemini, GEMINI_MODEL, MODEL } from "./client.js";
 import { IMAGE_KINDS, SLOTS, type ImageKind, type Metrics, type SlotId } from "../domain.js";
 import { readImageBase64 } from "../store.js";
 
@@ -50,25 +51,13 @@ export async function extractSlotMetrics(
   slot: SlotId,
 ): Promise<ExtractionResult> {
   const present: ImageKind[] = [];
-  const blocks: Array<
-    | { type: "text"; text: string }
-    | { type: "image"; source: { type: "base64"; media_type: "image/png"; data: string } }
-  > = [];
+  const imagesData: Array<{ kind: ImageKind; data: string; mime: string }> = [];
 
   for (const kind of IMAGE_KINDS) {
     const image = readImageBase64(userId, date, slot, kind);
     if (!image) continue;
     present.push(kind);
-    blocks.push({ type: "text", text: `ภาพชนิด ${kind.toUpperCase()}:` });
-    blocks.push({
-      type: "image",
-      source: {
-        type: "base64",
-        // Claude accepts png/jpeg/gif/webp; uploads are validated to those types.
-        media_type: image.mime as "image/png",
-        data: image.data,
-      },
-    });
+    imagesData.push({ kind, data: image.data, mime: image.mime });
   }
 
   if (present.length === 0) {
@@ -76,10 +65,108 @@ export async function extractSlotMetrics(
   }
 
   const slotDef = SLOTS.find((s) => s.id === slot)!;
-  blocks.push({
-    type: "text",
-    text: `วันที่ ${date} ช่วง "${slotDef.th}" (${slotDef.from}–${slotDef.to}) ถอดตัวเลขจากภาพข้างต้น`,
-  });
+  const promptText = `วันที่ ${date} ช่วง "${slotDef.th}" (${slotDef.from}–${slotDef.to}) ถอดตัวเลขจากภาพข้างต้น`;
+
+  const provider = getAiProvider();
+
+  if (provider === "gemini") {
+    const gemini = getGemini();
+    const contents: Array<string | { text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+
+    for (const img of imagesData) {
+      contents.push({ text: `ภาพชนิด ${img.kind.toUpperCase()}:` });
+      contents.push({
+        inlineData: {
+          mimeType: img.mime,
+          data: img.data,
+        },
+      });
+    }
+    contents.push({ text: promptText });
+
+    const response = await gemini.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
+      config: {
+        systemInstruction: SYSTEM,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            price_close: {
+              type: Type.NUMBER,
+              description: "Last traded / closing price of the contract visible in the intraday chart",
+              nullable: true,
+            },
+            call_oi: {
+              type: Type.NUMBER,
+              description: "Total call-side open interest across strikes",
+              nullable: true,
+            },
+            put_oi: {
+              type: Type.NUMBER,
+              description: "Total put-side open interest across strikes",
+              nullable: true,
+            },
+            oi_chg_total: {
+              type: Type.NUMBER,
+              description: "Net change in total open interest for the session, negative if it fell",
+              nullable: true,
+            },
+            pc_ratio: {
+              type: Type.NUMBER,
+              description: "Put/call open-interest ratio, rounded to two decimals",
+              nullable: true,
+            },
+            summary: {
+              type: Type.STRING,
+              description: "Two or three sentences in Thai describing what the screenshots show",
+            },
+            confidence: {
+              type: Type.STRING,
+              enum: ["high", "medium", "low"],
+              description: "How legible the numbers were",
+            },
+          },
+          required: ["summary", "confidence"],
+        },
+      },
+    });
+
+    const parsed = JSON.parse(response.text || "{}") as z.infer<typeof ExtractionSchema>;
+    return {
+      metrics: {
+        priceClose: parsed.price_close ?? null,
+        callOi: parsed.call_oi ?? null,
+        putOi: parsed.put_oi ?? null,
+        oiChgTotal: parsed.oi_chg_total ?? null,
+        pcRatio: parsed.pc_ratio ?? null,
+        summary: parsed.summary ?? "",
+        extractedAt: new Date().toISOString(),
+        extractedFrom: present,
+      },
+      confidence: parsed.confidence ?? "medium",
+    };
+  }
+
+  // Anthropic fallback
+  const blocks: Array<
+    | { type: "text"; text: string }
+    | { type: "image"; source: { type: "base64"; media_type: "image/png"; data: string } }
+  > = [];
+
+  for (const img of imagesData) {
+    blocks.push({ type: "text", text: `ภาพชนิด ${img.kind.toUpperCase()}:` });
+    blocks.push({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: img.mime as "image/png",
+        data: img.data,
+      },
+    });
+  }
+  blocks.push({ type: "text", text: promptText });
 
   const response = await anthropic().messages.parse({
     model: MODEL,

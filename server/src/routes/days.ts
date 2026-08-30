@@ -17,7 +17,7 @@ dayRoutes.get("/calendar", (req, res) => {
 });
 
 dayRoutes.get("/days/:date", (req, res) => {
-  const { date } = req.params;
+  const date = String(req.params.date ?? "");
   if (!isDateString(date)) {
     res.status(400).json({ error: "date must be YYYY-MM-DD" });
     return;
@@ -26,7 +26,8 @@ dayRoutes.get("/days/:date", (req, res) => {
 });
 
 dayRoutes.put("/days/:date/:slot", (req, res) => {
-  const { date, slot } = req.params;
+  const date = String(req.params.date ?? "");
+  const slot = String(req.params.slot ?? "");
   if (!isDateString(date) || !isSlotId(slot)) {
     res.status(400).json({ error: "bad date or slot" });
     return;

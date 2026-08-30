@@ -10,7 +10,15 @@ import { upsertLocalUser } from "./auth.js";
 import { storeImage, saveEntry } from "./store.js";
 import { IMAGE_KINDS, SLOTS, type ImageKind, type Metrics, type SlotId } from "./domain.js";
 
-const shotsDir = path.resolve(process.cwd(), "../design/project/shots");
+function getShotsDir(): string {
+  const p1 = path.resolve(process.cwd(), "design/project/shots");
+  if (fs.existsSync(p1)) return p1;
+  const p2 = path.resolve(process.cwd(), "../design/project/shots");
+  if (fs.existsSync(p2)) return p2;
+  return p1;
+}
+
+const shotsDir = getShotsDir();
 
 const DEMO_EMAIL = process.env.SEED_EMAIL ?? "demo@optiary.local";
 const DEMO_NAME = process.env.SEED_NAME ?? "ธนกฤต ว.";
@@ -145,13 +153,18 @@ function shotFile(kind: ImageKind, source: "27" | "28"): string {
   return path.join(shotsDir, `${base}${source}-lg.png`);
 }
 
-function main(): void {
+export function seedDemoData(force = false): void {
   if (!fs.existsSync(shotsDir)) {
-    console.error(`sample screenshots not found at ${shotsDir}`);
-    process.exit(1);
+    console.warn(`sample screenshots not found at ${shotsDir}`);
+    return;
   }
 
   const user = upsertLocalUser(DEMO_EMAIL, DEMO_NAME);
+  if (!force) {
+    const existing = db.prepare("SELECT COUNT(*) AS count FROM entries WHERE user_id = ?").get(user.id) as { count: number };
+    if (existing && existing.count > 0) return;
+  }
+
   db.prepare("DELETE FROM images WHERE user_id = ?").run(user.id);
   db.prepare("DELETE FROM entries WHERE user_id = ?").run(user.id);
   db.prepare("DELETE FROM messages WHERE user_id = ?").run(user.id);
@@ -161,12 +174,14 @@ function main(): void {
     for (const plan of day.slots) {
       for (const kind of plan.kinds) {
         const file = shotFile(kind, plan.source);
-        storeImage(user.id, day.date, plan.slot, kind, {
-          buffer: fs.readFileSync(file),
-          mimetype: "image/png",
-          originalname: path.basename(file),
-        });
-        images += 1;
+        if (fs.existsSync(file)) {
+          storeImage(user.id, day.date, plan.slot, kind, {
+            buffer: fs.readFileSync(file),
+            mimetype: "image/png",
+            originalname: path.basename(file),
+          });
+          images += 1;
+        }
       }
       if (plan.note || plan.tags || plan.metrics) {
         saveEntry(user.id, day.date, plan.slot, {
@@ -183,4 +198,13 @@ function main(): void {
   );
 }
 
-main();
+export function seedIfEmpty(): void {
+  const usersCount = db.prepare("SELECT COUNT(*) AS count FROM users").get() as { count: number } | undefined;
+  if (!usersCount || usersCount.count === 0) {
+    seedDemoData(true);
+  }
+}
+
+if (process.argv[1]?.endsWith("seed.ts") || process.argv[1]?.endsWith("seed.js")) {
+  seedDemoData(true);
+}
