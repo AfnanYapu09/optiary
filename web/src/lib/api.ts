@@ -24,8 +24,35 @@ export class ApiError extends Error {
   }
 }
 
+const TOKEN_KEY = "optiary_token";
+
+export function getStoredToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredToken(token: string | null): void {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, { credentials: "include", ...init });
+  const token = getStoredToken();
+  const headers = new Headers(init?.headers);
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+  const res = await fetch(`/api${path}`, { credentials: "include", ...init, headers });
   if (!res.ok) {
     let message = `คำขอล้มเหลว (${res.status})`;
     try {
@@ -46,13 +73,28 @@ function json(method: string, body: unknown): RequestInit {
 
 export const api = {
   authConfig: () => request<AuthConfig>("/auth/config"),
-  me: () => request<{ user: User }>("/me"),
+  me: () => request<{ user: User; token?: string }>("/me"),
   /** The server derives the identity from the ID token; nothing else is trusted. */
-  firebaseLogin: (idToken: string) =>
-    request<{ user: User }>("/auth/firebase-login", json("POST", { idToken })),
-  devLogin: (email?: string, name?: string) =>
-    request<{ user: User }>("/auth/dev-login", json("POST", { email, name })),
-  logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
+  firebaseLogin: async (idToken: string) => {
+    const res = await request<{ user: User; token?: string; slots?: any }>(
+      "/auth/firebase-login",
+      json("POST", { idToken }),
+    );
+    if (res.token) setStoredToken(res.token);
+    return res;
+  },
+  devLogin: async (email?: string, name?: string) => {
+    const res = await request<{ user: User; token?: string }>(
+      "/auth/dev-login",
+      json("POST", { email, name }),
+    );
+    if (res.token) setStoredToken(res.token);
+    return res;
+  },
+  logout: async () => {
+    setStoredToken(null);
+    return request<{ ok: true }>("/auth/logout", { method: "POST" });
+  },
 
   calendar: (month: string) =>
     request<{ month: string; days: CalendarDay[]; streak: Streak }>(`/calendar?month=${month}`),
@@ -63,9 +105,13 @@ export const api = {
   uploadImage: async (date: string, slot: SlotId, kind: ImageKind, file: File) => {
     const form = new FormData();
     form.append("file", file);
+    const token = getStoredToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["authorization"] = `Bearer ${token}`;
     const res = await fetch(`/api/images/${date}/${slot}/${kind}`, {
       method: "POST",
       body: form,
+      headers,
       credentials: "include",
     });
     if (!res.ok) {
@@ -120,9 +166,12 @@ export async function streamChat(
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (token) headers["authorization"] = `Bearer ${token}`;
   const res = await fetch("/api/chat", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify(body),
     credentials: "include",
     signal,

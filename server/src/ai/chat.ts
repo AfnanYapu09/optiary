@@ -43,15 +43,14 @@ const ANTHROPIC_TOOLS: Anthropic.Tool[] = [
         query: { type: "string", description: "คำค้นในโน้ต เว้นว่างได้" },
         slot: {
           type: "string",
-          enum: [...SLOTS.map((s) => s.id), ""],
-          description: "จำกัดเฉพาะช่วงเวลา เว้นว่างเพื่อค้นทุกช่วง",
+          enum: SLOTS.map((s) => s.id),
+          description: "จำกัดเฉพาะช่วงเวลา (morning, afternoon, evening, night, latenight)",
         },
         limit: { type: "integer", description: "จำนวนผลลัพธ์สูงสุด 1–40" },
       },
-      required: ["query", "slot", "limit"],
+      required: ["query", "limit"],
       additionalProperties: false,
     },
-    strict: true,
   },
   {
     name: "get_stats",
@@ -77,10 +76,9 @@ const ANTHROPIC_TOOLS: Anthropic.Tool[] = [
         text: { type: "string", description: "ข้อความที่จะบันทึก เขียนเป็นภาษาไทย" },
         tag: { type: "string", description: "แท็กที่จะติด เช่น #สมมติฐาน-ค่ำ เว้นว่างได้" },
       },
-      required: ["date", "slot", "text", "tag"],
+      required: ["date", "slot", "text"],
       additionalProperties: false,
     },
-    strict: true,
   },
 ];
 
@@ -105,12 +103,12 @@ const GEMINI_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         query: { type: Type.STRING, description: "คำค้นในโน้ต เว้นว่างได้" },
         slot: {
           type: Type.STRING,
-          enum: [...SLOTS.map((s) => s.id), ""],
-          description: "จำกัดเฉพาะช่วงเวลา เว้นว่างเพื่อค้นทุกช่วง",
+          enum: SLOTS.map((s) => s.id),
+          description: "จำกัดเฉพาะช่วงเวลา (morning, afternoon, evening, night, latenight) หากต้องการค้นทุกช่วงไม่ต้องระบุ",
         },
         limit: { type: Type.INTEGER, description: "จำนวนผลลัพธ์สูงสุด 1–40" },
       },
-      required: ["query", "slot", "limit"],
+      required: [],
     },
   },
   {
@@ -135,7 +133,7 @@ const GEMINI_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         text: { type: Type.STRING, description: "ข้อความที่จะบันทึก เขียนเป็นภาษาไทย" },
         tag: { type: Type.STRING, description: "แท็กที่จะติด เช่น #สมมติฐาน-ค่ำ เว้นว่างได้" },
       },
-      required: ["date", "slot", "text", "tag"],
+      required: ["date", "slot", "text"],
     },
   },
 ];

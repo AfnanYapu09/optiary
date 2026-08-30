@@ -5,6 +5,7 @@ import {
   exchangeGoogleCode,
   googleAuthUrl,
   googleConfigured,
+  issueToken,
   makeOAuthState,
   readOAuthState,
   setSessionCookie,
@@ -33,7 +34,8 @@ authRoutes.get("/me", (req, res) => {
     res.status(401).json({ error: "unauthorized" });
     return;
   }
-  res.json({ user: req.user, slots: SLOTS });
+  const token = issueToken(req.user.id);
+  res.json({ user: req.user, token, slots: SLOTS });
 });
 
 /**
@@ -57,8 +59,9 @@ authRoutes.post("/auth/firebase-login", async (req, res) => {
       name: identity.name ?? identity.email.split("@")[0],
       picture: identity.picture,
     });
+    const token = issueToken(user.id);
     setSessionCookie(res, user.id);
-    res.json({ user, slots: SLOTS });
+    res.json({ user, token, slots: SLOTS });
   } catch (error) {
     if (error instanceof FirebaseTokenError) {
       res.status(401).json({ error: error.message });
@@ -114,8 +117,9 @@ authRoutes.post("/auth/dev-login", (req, res) => {
     : "demo@optiary.local";
   const name = typeof req.body?.name === "string" && req.body.name.trim() ? req.body.name : "นักวิจัย (เดโม)";
   const user = upsertLocalUser(email, name);
+  const token = issueToken(user.id);
   setSessionCookie(res, user.id);
-  res.json({ user });
+  res.json({ user, token });
 });
 
 authRoutes.post("/auth/logout", (_req, res) => {

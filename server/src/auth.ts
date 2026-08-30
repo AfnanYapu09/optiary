@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 import { config, googleConfigured, resolveSessionSecret } from "./config.js";
 import { db, nowIso, uid } from "./db.js";
 import { defaultSettings, type UserSettings } from "./domain.js";
+import { verifyFirebaseIdToken } from "./firebase-token.js";
 
 const SECRET = resolveSessionSecret();
 const COOKIE = "optiary_session";
@@ -30,14 +31,14 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
 }
 
-function issueToken(userId: string): string {
+export function issueToken(userId: string): string {
   const body = Buffer.from(
     JSON.stringify({ sub: userId, exp: Date.now() + config.sessionMaxAgeMs }),
   ).toString("base64url");
   return `${body}.${sign(body)}`;
 }
 
-function readToken(token: string | undefined): string | null {
+export function readToken(token: string | undefined): string | null {
   if (!token) return null;
   const [body, mac] = token.split(".");
   if (!body || !mac) return null;
@@ -57,10 +58,11 @@ function readToken(token: string | undefined): string | null {
 }
 
 export function setSessionCookie(res: Response, userId: string): void {
+  const isSecure = config.apiOrigin.startsWith("https://") || process.env.NODE_ENV === "production";
   res.cookie(COOKIE, issueToken(userId), {
     httpOnly: true,
-    sameSite: "lax",
-    secure: config.apiOrigin.startsWith("https://"),
+    sameSite: isSecure ? "none" : "lax",
+    secure: isSecure,
     maxAge: config.sessionMaxAgeMs,
     path: "/",
   });
@@ -157,11 +159,41 @@ export function upsertLocalUser(email: string, name: string): User {
   return getUser(id)!;
 }
 
-export function attachUser(req: Request, _res: Response, next: NextFunction): void {
-  const id = readToken(req.cookies?.[COOKIE]);
-  if (id) {
-    const user = getUser(id);
-    if (user) req.user = user;
+export async function attachUser(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    let id: string | null = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7).trim();
+      id = readToken(token);
+      if (!id && token.split(".").length === 3) {
+        try {
+          const identity = await verifyFirebaseIdToken(token);
+          const user = upsertGoogleUser({
+            sub: identity.sub,
+            email: identity.email,
+            name: identity.name ?? identity.email.split("@")[0],
+            picture: identity.picture,
+          });
+          req.user = user;
+          next();
+          return;
+        } catch {
+          // Token verification failed or not a Firebase token
+        }
+      }
+    }
+
+    if (!id) {
+      id = readToken(req.cookies?.[COOKIE]);
+    }
+
+    if (id) {
+      const user = getUser(id);
+      if (user) req.user = user;
+    }
+  } catch (error) {
+    console.error("attachUser error:", error);
   }
   next();
 }

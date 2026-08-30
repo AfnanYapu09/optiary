@@ -114,16 +114,16 @@ function describeGeminiError(error: unknown): { status: number; message: string 
   const text = error.message;
   const status = Number(/\b(4\d{2}|5\d{2})\b/.exec(text)?.[1] ?? 0);
 
-  if (status === 401 || status === 403 || /API key/i.test(text)) {
-    return { status: 503, message: "คีย์ของผู้ช่วย AI ไม่ถูกต้องหรือหมดสิทธิ์" };
+  if (status === 401 || status === 403 || /API[_ ]?key|PERMISSION_DENIED|UNAUTHENTICATED/i.test(text)) {
+    return { status: 503, message: "คีย์ GEMINI_API_KEY ไม่ถูกต้อง หมดสิทธิ์ หรือยังไม่ได้ตั้งค่าบนเซิร์ฟเวอร์" };
   }
-  if (status === 429 || /quota|rate limit/i.test(text)) {
-    return { status: 429, message: "ผู้ช่วย AI ใช้งานหนักอยู่ ลองอีกครั้งในอีกสักครู่" };
+  if (status === 429 || /quota|rate limit|RESOURCE_EXHAUSTED/i.test(text)) {
+    return { status: 429, message: "ผู้ช่วย AI โควต้าเต็มหรือใช้งานหนักอยู่ กรุณาลองใหม่ในอีกสักครู่" };
   }
-  if (status === 404 || /not found|not supported/i.test(text)) {
+  if (status === 404 || /not found|not supported|NOT_FOUND/i.test(text)) {
     return {
       status: 502,
-      message: `ไม่พบโมเดล "${GEMINI_MODEL}" — ตรวจค่า GEMINI_MODEL บนเซิร์ฟเวอร์`,
+      message: `ไม่พบโมเดล "${GEMINI_MODEL}" — กรุณาตรวจหรือแก้ไขค่า GEMINI_MODEL (เช่น gemini-2.5-flash หรือ gemini-3.7-flash) ใน .env`,
     };
   }
   if (status >= 500) {

@@ -7,7 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, ApiError } from "./api.ts";
+import { api, ApiError, setStoredToken } from "./api.ts";
+import { auth, onAuthStateChanged, signOutFirebase } from "./firebase.ts";
 import type { AuthConfig, User, UserSettings } from "./types.ts";
 
 type SessionValue = {
@@ -29,10 +30,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const [me, cfg] = await Promise.allSettled([api.me(), api.authConfig()]);
-      setUser(me.status === "fulfilled" ? me.value.user : null);
+      if (me.status === "fulfilled") {
+        setUser(me.value.user);
+        if (me.value.token) {
+          setStoredToken(me.value.token);
+        }
+      } else {
+        setUser(null);
+      }
       setConfig(cfg.status === "fulfilled" ? cfg.value : null);
     } catch (error) {
-      // A 401 simply means "not signed in" — anything else is worth surfacing.
       if (!(error instanceof ApiError && error.status === 401)) console.error(error);
       setUser(null);
     } finally {
@@ -44,8 +51,36 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  // Synchronize with Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        try {
+          const idToken = await fbUser.getIdToken();
+          const res = await api.firebaseLogin(idToken);
+          if (res?.user) {
+            setUser(res.user);
+          }
+        } catch (err) {
+          console.warn("Auto-sync Firebase auth state notice:", err);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const signOut = useCallback(async () => {
-    await api.logout();
+    try {
+      await api.logout();
+    } catch (err) {
+      console.warn("Logout error:", err);
+    }
+    try {
+      await signOutFirebase();
+    } catch (err) {
+      console.warn("Firebase logout error:", err);
+    }
+    setStoredToken(null);
     setUser(null);
   }, []);
 

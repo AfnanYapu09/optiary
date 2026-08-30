@@ -61,9 +61,13 @@ export default function LoginPage() {
       // from that, so there is nothing else here worth sending.
       const idToken = await fbUser.getIdToken();
       const loginRes = await api.firebaseLogin(idToken);
-      // Save profile in Cloud Firestore
+      // Save profile in Cloud Firestore safely in the background
       if (loginRes?.user) {
-        await saveUserProfileToCloud(loginRes.user);
+        try {
+          await saveUserProfileToCloud(loginRes.user);
+        } catch (syncErr) {
+          console.warn("Could not sync profile to cloud:", syncErr);
+        }
       }
       await refresh();
       toast("เข้าสู่ระบบด้วย Google สำเร็จ!", "ok");

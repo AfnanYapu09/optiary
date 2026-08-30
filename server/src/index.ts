@@ -9,6 +9,7 @@ import { seedIfEmpty } from "./seed.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.use(express.json({ limit: "5mb" }));
 app.use(cookieParser());
