@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0b0c;font-family:'IBM Plex Sans Thai',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#d9b26a;text-decoration:none}a:hover{color:#eccb8d}
+.dv-turn{padding:44px 48px 36px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 26px}
+.dv-tid{font:500 10px 'IBM Plex Mono',monospace;padding:3px 7px;background:#d9b26a;color:#14110c;border-radius:4px}
+.dv-tname{font:500 13px/1.2 'IBM Plex Sans Thai',sans-serif;color:#edeae4}
+.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:500 10.5px 'IBM Plex Mono',monospace;padding:3px 7px;background:rgba(255,255,255,.09);color:#edeae4;border-radius:5px}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:300 12px/1.3 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.5)}
+.dv-card{background:#0f1113;border:1px solid rgba(255,255,255,.09);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden}
+.dv-opt:target .dv-oid{background:#d9b26a;color:#14110c}
+.dv-next{margin:28px 0 0;font:300 12px/1.7 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)}
+</style></helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><span class="dv-tid">1</span><span class="dv-tname">Optiary — สมุดบันทึกภาพเพื่อวิจัย Gold Futures (GC) Data Option · Desktop 1440 + Mobile 390</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a"><div class="dv-olabel"><span class="dv-oid">1a</span>เข้าสู่ระบบด้วย Google</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex">
+  <div style="flex:1.25;background:radial-gradient(120% 90% at 12% 8%, rgba(217,178,106,.10), transparent 60%),#0d0f11;padding:64px 72px;display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:26px;height:26px;background:#d9b26a;transform:rotate(45deg);border-radius:5px"></div>
+      <span style="font:500 17px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4;letter-spacing:.16em">OPTIARY</span>
+    </div>
+    <div style="max-width:580px;display:flex;flex-direction:column;gap:26px">
+      <h1 style="margin:0;font:300 46px/1.35 'IBM Plex Sans Thai',sans-serif;color:#edeae4;text-wrap:pretty">บันทึกภาพตลาดทองคำ<br><span style="color:#d9b26a">วันละ 5 ช่วงเวลา</span><br>ให้กลายเป็นชุดข้อมูลวิจัย</h1>
+      <p style="margin:0;font:300 15px/1.85 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55);max-width:470px;text-wrap:pretty">เก็บภาพ Intraday, OI และ OI Chg ของ GC ในทุกช่วงเวลา ให้ AI ช่วยถอดตัวเลข จดโน้ต และสรุปออกมาเป็นกราฟเปรียบเทียบอัตโนมัติ</p>
+      <div style="display:flex;flex-direction:column;gap:14px;padding-top:6px">
+        <div style="display:flex;align-items:center;gap:12px"><div style="width:5px;height:5px;background:#d9b26a;border-radius:50%"></div><span style="font:300 13.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.72)">ปฏิทินติดตามความครบของข้อมูลรายวัน</span></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="width:5px;height:5px;background:#d9b26a;border-radius:50%"></div><span style="font:300 13.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.72)">AI Chatbot ช่วยจด อ่านภาพ และตอบคำถามจากข้อมูลเก่า</span></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="width:5px;height:5px;background:#d9b26a;border-radius:50%"></div><span style="font:300 13.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.72)">เทียบภาพข้ามช่วงเวลาและข้ามวันได้ 3 มุมมอง</span></div>
+      </div>
+    </div>
+    <span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.3);letter-spacing:.12em">RESEARCH WORKSPACE · COMEX GC · v0.1</span>
+  </div>
+  <div style="flex:1;background:#131619;border-left:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;padding:0 72px">
+    <div style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:28px">
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <h2 style="margin:0;font:400 26px/1.3 'IBM Plex Sans Thai',sans-serif;color:#edeae4">เข้าสู่ระบบ</h2>
+        <p style="margin:0;font:300 13.5px/1.7 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.5)">ใช้บัญชี Google ของคุณ ระบบจะสร้างสมุดวิจัยให้อัตโนมัติในการเข้าครั้งแรก</p>
+      </div>
+      <button style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:15px 20px;background:#f5f2ec;border:none;border-radius:10px;cursor:pointer;font:500 14.5px/1 'IBM Plex Sans Thai',sans-serif;color:#1a1c1e" style-hover="background:#ffffff">
+        <span style="width:20px;height:20px;border:1px dashed rgba(0,0,0,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font:500 11px/1 'IBM Plex Mono',monospace;color:rgba(0,0,0,.5)">G</span>
+        ดำเนินการต่อด้วย Google
+      </button>
+      <div style="display:flex;align-items:center;gap:14px"><div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">OR</span><div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <input placeholder="อีเมลของคุณ" style="width:100%;box-sizing:border-box;padding:14px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:10px;font:300 14px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4;outline:none" style-focus="border-color:rgba(217,178,106,.6)">
+        <button style="width:100%;padding:14px;background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:10px;font:400 14px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8);cursor:pointer" style-hover="border-color:rgba(217,178,106,.5);color:#d9b26a">ส่งลิงก์เข้าสู่ระบบ</button>
+      </div>
+      <p style="margin:0;font:300 11.5px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.34)">การเข้าสู่ระบบถือว่ายอมรับ <a href="#1a">เงื่อนไขการใช้งาน</a> และ <a href="#1a">นโยบายข้อมูลวิจัย</a> · ภาพทั้งหมดถูกเก็บเป็นส่วนตัว</p>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1b"><div class="dv-olabel"><span class="dv-oid">1b</span>ภาพรวม + ปฏิทินความครบของข้อมูล</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0f1113">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:60px;border-bottom:1px solid rgba(255,255,255,.07);background:#111417;flex:none">
+    <div style="display:flex;align-items:center;gap:11px"><div style="width:16px;height:16px;background:#d9b26a;transform:rotate(45deg);border-radius:3px"></div><span style="font:500 13px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4;letter-spacing:.16em">OPTIARY</span><span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);margin-left:10px;padding-left:12px;border-left:1px solid rgba(255,255,255,.1)">GC · GOLD FUTURES</span></div>
+    <div style="display:flex;align-items:center;gap:18px">
+      <div style="display:flex;align-items:center;gap:9px;padding:8px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;width:280px"><div style="width:11px;height:11px;border:1.5px solid rgba(237,234,228,.35);border-radius:50%"></div><span style="font:300 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">ค้นหาวัน โน้ต หรือแท็ก</span></div>
+      <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.45)">30 AUG 2026 · 21:04</span>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#3a3f45,#22262a);border:1px solid rgba(255,255,255,.12)"></div>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:216px;border-right:1px solid rgba(255,255,255,.07);padding:20px 14px;display:flex;flex-direction:column;gap:4px;background:#111417;flex:none">
+      <span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.3);letter-spacing:.14em;padding:6px 12px 10px">WORKSPACE</span>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;background:rgba(217,178,106,.12)"><div style="width:6px;height:6px;background:#d9b26a;border-radius:50%"></div><span style="font:500 13px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">ภาพรวม</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px"><div style="width:6px;height:6px;background:rgba(237,234,228,.25);border-radius:50%"></div><span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.62)">จดบันทึกวันนี้</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px"><div style="width:6px;height:6px;background:rgba(237,234,228,.25);border-radius:50%"></div><span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.62)">เปรียบเทียบรูปภาพ</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px"><div style="width:6px;height:6px;background:rgba(237,234,228,.25);border-radius:50%"></div><span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.62)">กราฟสรุป</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px"><div style="width:6px;height:6px;background:rgba(237,234,228,.25);border-radius:50%"></div><span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.62)">AI ผู้ช่วยวิจัย</span></div>
+      <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px"><div style="width:6px;height:6px;background:rgba(237,234,228,.25);border-radius:50%"></div><span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.62)">ตั้งค่า</span></div>
+      <div style="flex:1"></div>
+      <div style="padding:14px;border:1px solid rgba(255,255,255,.07);border-radius:10px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.12em">DATASET</span>
+        <span style="font:400 22px/1 'IBM Plex Mono',monospace;color:#edeae4">1,284</span>
+        <span style="font:300 11.5px/1.5 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)">ภาพที่บันทึกแล้ว · 86 วัน</span>
+      </div>
+    </div>
+    <div style="flex:1;padding:26px 28px;display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">CALENDAR</span>
+          <h2 style="margin:0;font:300 27px/1.2 'IBM Plex Sans Thai',sans-serif;color:#edeae4">สิงหาคม 2026</h2>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden">
+            <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c;background:#d9b26a">เดือน</span>
+            <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">สัปดาห์</span>
+          </div>
+          <span style="padding:8px 13px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font:400 12px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.55)">‹</span>
+          <span style="padding:8px 13px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font:400 12px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.55)">›</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px">
+        <sc-for list="{{ dow }}" as="d" hint-placeholder-count="7"><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.3);letter-spacing:.1em;text-align:center;padding-bottom:2px">{{ d }}</span></sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:7px">
+        <sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+          <div style="height:92px;border-radius:10px;padding:9px 9px 8px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:{{ d.bg }};border:1px solid {{ d.border }}">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font:500 12.5px/1 'IBM Plex Mono',monospace;color:{{ d.color }}">{{ d.n }}</span>
+              <span style="font:400 9px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.32)">{{ d.count }}</span>
+            </div>
+            <div style="display:flex;gap:3px">
+              <sc-for list="{{ d.dots }}" as="c" hint-placeholder-count="5"><span style="flex:1;height:4px;border-radius:2px;background:{{ c }}"></span></sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;padding-top:2px">
+        <div style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:4px;border-radius:2px;background:#d9b26a"></span><span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)">ครบ 3 ภาพ</span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:4px;border-radius:2px;background:rgba(217,178,106,.35)"></span><span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)">ไม่ครบ</span></div>
+        <div style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:4px;border-radius:2px;background:rgba(255,255,255,.08)"></span><span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)">ยังไม่บันทึก</span></div>
+      </div>
+    </div>
+    <div style="width:328px;border-left:1px solid rgba(255,255,255,.07);padding:26px 24px;display:flex;flex-direction:column;gap:18px;background:#111417;flex:none">
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">TODAY</span>
+        <span style="font:400 17px/1.3 'IBM Plex Sans Thai',sans-serif;color:#edeae4">วันอาทิตย์ 30 สิงหาคม</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ todaySlots }}" as="s" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:10px;background:{{ s.bg }};border:1px solid {{ s.border }}">
+            <span style="width:38px;font:400 10.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">{{ s.time }}</span>
+            <span style="flex:1;font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:{{ s.color }}">{{ s.name }}</span>
+            <span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:{{ s.statColor }}">{{ s.stat }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ showAi }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:16px;border-radius:12px;background:linear-gradient(160deg,rgba(217,178,106,.13),rgba(217,178,106,.03));border:1px solid rgba(217,178,106,.22);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:13px;height:13px;background:#d9b26a;transform:rotate(45deg);border-radius:3px"></div><span style="font:500 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">AI สังเกตเห็น</span></div>
+        <p style="margin:0;font:300 13px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.75);text-wrap:pretty">OI ฝั่ง Put เพิ่มขึ้นต่อเนื่อง 4 ช่วงเวลาติดกัน ขณะที่ราคายืนในกรอบเดิม — น่าเก็บภาพช่วง “ดึก” ให้ครบเพื่อยืนยันรูปแบบ</p>
+        <span style="font:400 11px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">เปิดในแชท →</span>
+      </div>
+      </sc-if>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:2px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">STREAK</span>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font:400 30px/1 'IBM Plex Mono',monospace;color:#edeae4">12</span><span style="font:300 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)">วันติดต่อกันที่บันทึกครบ</span></div>
+        <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden"><div style="width:74%;height:100%;background:#d9b26a"></div></div>
+      </div>
+      <div style="flex:1"></div>
+      <button style="width:100%;padding:14px;background:#d9b26a;border:none;border-radius:10px;font:500 13.5px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c;cursor:pointer" style-hover="background:#eccb8d">+ บันทึกช่วง “ค่ำ”</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1c"><div class="dv-olabel"><span class="dv-oid">1c</span>หน้าจดบันทึก 5 ช่วงเวลา (Intraday / OI / OI Chg)</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0f1113">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:60px;border-bottom:1px solid rgba(255,255,255,.07);background:#111417;flex:none">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">‹ ปฏิทิน</span>
+      <span style="font:400 16px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ศุกร์ 28 สิงหาคม 2026</span>
+      <span style="padding:5px 10px;border-radius:20px;background:rgba(217,178,106,.14);font:400 10.5px/1 'IBM Plex Mono',monospace;color:#d9b26a">12 / 15 ภาพ</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="padding:9px 14px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">ส่งออก CSV</span>
+      <span style="padding:9px 16px;border-radius:8px;background:#d9b26a;font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c">บันทึก</span>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="flex:1;padding:22px 26px;display:flex;flex-direction:column;gap:18px;min-width:0">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;flex:none">
+        <sc-for list="{{ slotSteps }}" as="s" hint-placeholder-count="5">
+          <div style="padding:12px 13px;border-radius:10px;background:{{ s.bg }};border:1px solid {{ s.border }};display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 13.5px/1 'IBM Plex Sans Thai',sans-serif;color:{{ s.color }}">{{ s.name }}</span><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35)">{{ s.time }}</span></div>
+            <div style="display:flex;gap:3px"><sc-for list="{{ s.dots }}" as="c" hint-placeholder-count="3"><span style="flex:1;height:3px;border-radius:2px;background:{{ c }}"></span></sc-for></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:12px;flex:none">
+        <h2 style="margin:0;font:400 20px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ช่วงค่ำ</h2>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">19:00 – 23:00 · GC DEC26</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;flex:none">
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">Intraday</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:#7fbf9b">UPLOADED</span></div>
+          <div style="height:186px;border-radius:10px;border:1px solid rgba(255,255,255,.09);background:#fff;overflow:hidden;position:relative"><img loading="lazy" decoding="async" src="shots/intraday28-lg.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;"><span style="position:absolute;left:9px;bottom:8px;padding:4px 8px;border-radius:5px;background:rgba(10,11,12,.78);font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.85);letter-spacing:.08em">INTRADAY · 19:00</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">OI</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:#7fbf9b">UPLOADED</span></div>
+          <div style="height:186px;border-radius:10px;border:1px solid rgba(255,255,255,.09);background:#fff;overflow:hidden;position:relative"><img loading="lazy" decoding="async" src="shots/oi28-lg.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;"><span style="position:absolute;left:9px;bottom:8px;padding:4px 8px;border-radius:5px;background:rgba(10,11,12,.78);font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.85);letter-spacing:.08em">OPEN INTEREST</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">OI Chg</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:#d9b26a">รอภาพ</span></div>
+          <div style="height:186px;border-radius:10px;border:1px dashed rgba(217,178,106,.4);background:rgba(217,178,106,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+            <div style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(217,178,106,.5);display:flex;align-items:center;justify-content:center;font:400 15px/1 'IBM Plex Mono',monospace;color:#d9b26a">+</div>
+            <span style="font:300 12px/1.5 'IBM Plex Sans Thai',sans-serif;color:rgba(217,178,106,.85);text-align:center">ลากภาพมาวาง<br><span style="font:400 9.5px/1.6 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35)">หรือ ⌘V วางจากคลิปบอร์ด</span></span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:1.15fr 1fr;gap:14px;min-height:0">
+        <div style="display:flex;flex-direction:column;gap:9px;min-height:0">
+          <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">NOTE</span>
+          <div style="flex:1;border-radius:10px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.02);padding:14px 15px;display:flex;flex-direction:column;gap:10px;min-height:0">
+            <p style="margin:0;font:300 13px/1.85 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.78);text-wrap:pretty">ราคายืนเหนือ 3,412 ตลอดช่วง แรงขายเบาลงหลัง 20:30 · OI Call 3450 เพิ่ม +1,820 สัญญา ขณะที่ Put 3400 ลดลง −640 → โครงสร้างเอียงขึ้นอ่อน ๆ</p>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <span style="padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.06);font:400 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">#call-buildup</span>
+              <span style="padding:5px 10px;border-radius:20px;background:rgba(255,255,255,.06);font:400 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">#range-bound</span>
+              <span style="padding:5px 10px;border-radius:20px;background:rgba(217,178,106,.14);font:400 11px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">+ แท็ก</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;min-height:0">
+          <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">EXTRACTED BY AI</span>
+          <div style="flex:1;border-radius:10px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.02);padding:6px 4px;display:flex;flex-direction:column;min-height:0;overflow:hidden">
+            <sc-for list="{{ extracted }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05)">
+                <span style="flex:1;font:300 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">{{ r.k }}</span>
+                <span style="font:500 12.5px/1 'IBM Plex Mono',monospace;color:{{ r.color }}">{{ r.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="width:376px;border-left:1px solid rgba(255,255,255,.07);background:#111417;display:flex;flex-direction:column;flex:none">
+      <div style="padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex:none">
+        <div style="width:15px;height:15px;background:#d9b26a;transform:rotate(45deg);border-radius:3px"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font:500 13px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ผู้ช่วยวิจัย</span><span style="font:300 10.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">อ่านภาพ · จดโน้ต · ตอบจากข้อมูลเก่า</span></div>
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.3)">ค่ำ</span>
+      </div>
+      <div style="flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-height:0;overflow:hidden">
+        <div style="align-self:flex-end;max-width:82%;padding:12px 14px;border-radius:12px 12px 4px 12px;background:rgba(255,255,255,.07)"><p style="margin:0;font:300 13px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85)">อ่านภาพ OI ที่เพิ่งอัปโหลด แล้วจดสรุปให้ด้วย</p></div>
+        <div style="max-width:90%;display:flex;flex-direction:column;gap:9px">
+          <div style="padding:13px 14px;border-radius:12px 12px 12px 4px;background:linear-gradient(160deg,rgba(217,178,106,.12),rgba(217,178,106,.03));border:1px solid rgba(217,178,106,.2)">
+            <p style="margin:0;font:300 13px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85);text-wrap:pretty">อ่านได้แล้วครับ · Call OI รวม 184,220 (+1,820) · Put OI 176,940 (−640) · P/C ratio 0.96 ลดจาก 1.01 ในช่วงเย็น</p>
+          </div>
+          <div style="display:flex;gap:7px"><span style="padding:6px 11px;border-radius:7px;background:rgba(217,178,106,.16);font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">เติมลงโน้ต</span><span style="padding:6px 11px;border-radius:7px;border:1px solid rgba(255,255,255,.12);font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">แก้ตัวเลข</span></div>
+        </div>
+        <div style="align-self:flex-end;max-width:82%;padding:12px 14px;border-radius:12px 12px 4px 12px;background:rgba(255,255,255,.07)"><p style="margin:0;font:300 13px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85)">3 วันก่อน ช่วงค่ำ P/C เป็นเท่าไหร่</p></div>
+        <div style="max-width:90%;padding:13px 14px;border-radius:12px 12px 12px 4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+          <p style="margin:0 0 10px;font:300 13px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">25 ส.ค. ช่วงค่ำ P/C = 1.08 · วันนั้นราคาปิดช่วง −0.4%</p>
+          <div style="display:flex;gap:7px">
+            <div style="width:74px;height:52px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:#fff;overflow:hidden"><img loading="lazy" decoding="async" src="shots/oi27-sm.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;"></div>
+            <div style="width:74px;height:52px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:#fff;overflow:hidden"><img loading="lazy" decoding="async" src="shots/oi28-sm.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;"></div>
+            <span style="align-self:flex-end;font:400 10.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">เทียบภาพ →</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:14px 18px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:10px;flex:none">
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <span style="padding:6px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">สรุปทั้งวัน</span>
+          <span style="padding:6px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">หาวันที่คล้ายกัน</span>
+          <span style="padding:6px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">ตั้งสมมติฐาน</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)">
+          <span style="flex:1;font:300 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">พิมพ์ หรือวางภาพเพื่อให้ AI ช่วยจด</span>
+          <span style="width:26px;height:26px;border-radius:7px;background:#d9b26a;display:flex;align-items:center;justify-content:center;font:400 12px/1 'IBM Plex Mono',monospace;color:#14110c">↑</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1d"><div class="dv-olabel"><span class="dv-oid">1d</span>เปรียบเทียบรูปภาพ — Side-by-side + สไลเดอร์</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0f1113">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:60px;border-bottom:1px solid rgba(255,255,255,.07);background:#111417;flex:none">
+    <div style="display:flex;align-items:center;gap:16px">
+      <span style="font:400 16px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">เปรียบเทียบรูปภาพ</span>
+      <div style="display:flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden">
+        <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c;background:#d9b26a">คู่เทียบ</span>
+        <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">ตาราง</span>
+        <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">ไทม์ไลน์</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="padding:9px 14px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">ซิงก์การซูม</span>
+      <span style="padding:9px 16px;border-radius:8px;background:#d9b26a;font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c">บันทึกเป็นบอร์ด</span>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:244px;border-right:1px solid rgba(255,255,255,.07);background:#111417;padding:20px 18px;display:flex;flex-direction:column;gap:16px;flex:none">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">ชนิดภาพ</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="padding:9px 12px;border-radius:8px;background:rgba(217,178,106,.13);font:400 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">Intraday</span>
+          <span style="padding:9px 12px;border-radius:8px;font:400 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">OI</span>
+          <span style="padding:9px 12px;border-radius:8px;font:400 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">OI Chg</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">คลังภาพ</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ library }}" as="l" hint-placeholder-count="5">
+            <div style="display:flex;gap:10px;align-items:center;padding:7px;border-radius:9px;border:1px solid {{ l.border }};background:{{ l.bg }}">
+              <div style="width:52px;height:36px;border-radius:5px;border:1px solid rgba(255,255,255,.12);background:#fff;flex:none;overflow:hidden"><img src="{{ l.img }}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block"></div>
+              <div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.75)">{{ l.day }}</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35)">{{ l.slot }}</span></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;padding:22px 26px;display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <span style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.75)">25 ส.ค. · ค่ำ</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.3)">VS</span>
+        <span style="padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.75)">28 ส.ค. · ค่ำ</span>
+        <div style="flex:1"></div>
+        <span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">ลากเส้นกลางเพื่อไล่ดูภาพ</span>
+      </div>
+      <div style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:#131619;display:flex;min-height:0;overflow:hidden;position:relative">
+        <div style="flex:1;background:#fff;position:relative;overflow:hidden"><img loading="lazy" decoding="async" src="shots/intraday27-lg.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;object-position:6% 46%"><span style="position:absolute;left:18px;bottom:18px;padding:5px 10px;border-radius:6px;background:rgba(10,11,12,.8);font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.85);letter-spacing:.1em">INTRADAY · 25 AUG · 19:00–23:00</span></div>
+        <div style="width:2px;background:#d9b26a;position:relative;flex:none"><div style="position:absolute;top:50%;left:-13px;width:28px;height:28px;border-radius:50%;background:#d9b26a;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;font:400 11px/1 'IBM Plex Mono',monospace;color:#14110c">↔</div></div>
+        <div style="flex:1;background:#fff;position:relative;overflow:hidden"><img loading="lazy" decoding="async" src="shots/intraday28-lg.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;object-position:6% 46%"><span style="position:absolute;right:18px;bottom:18px;padding:5px 10px;border-radius:6px;background:rgba(10,11,12,.8);font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.85);letter-spacing:.1em">INTRADAY · 28 AUG · 19:00–23:00</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;flex:none">
+        <sc-for list="{{ diffStats }}" as="s" hint-placeholder-count="4">
+          <div style="padding:13px 14px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:7px">
+            <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.1em">{{ s.k }}</span>
+            <span style="font:400 18px/1 'IBM Plex Mono',monospace;color:{{ s.color }}">{{ s.v }}</span>
+            <span style="font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">{{ s.sub }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:14px 16px;border-radius:10px;background:linear-gradient(160deg,rgba(217,178,106,.1),rgba(217,178,106,.02));border:1px solid rgba(217,178,106,.2);display:flex;align-items:flex-start;gap:12px;flex:none">
+        <div style="width:13px;height:13px;background:#d9b26a;transform:rotate(45deg);border-radius:3px;margin-top:3px;flex:none"></div>
+        <p style="margin:0;font:300 13px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.78);text-wrap:pretty">ทั้งสองวันเป็นช่วงค่ำที่ราคาแกว่งในกรอบใกล้เคียงกัน แต่ 28 ส.ค. มี Call OI สะสมมากกว่า 2.6 เท่า — ตัวแปรที่ต่างชัดที่สุดคือ OI Chg ที่สตราคเหนือราคาปัจจุบัน</p>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1e"><div class="dv-olabel"><span class="dv-oid">1e</span>เปรียบเทียบ — ตาราง (วัน × ช่วงเวลา) และไทม์ไลน์</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0f1113">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:60px;border-bottom:1px solid rgba(255,255,255,.07);background:#111417;flex:none">
+    <div style="display:flex;align-items:center;gap:16px">
+      <span style="font:400 16px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">เปรียบเทียบรูปภาพ</span>
+      <div style="display:flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden">
+        <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">คู่เทียบ</span>
+        <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c;background:#d9b26a">ตาราง</span>
+        <span style="padding:8px 14px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">ไทม์ไลน์</span>
+      </div>
+    </div>
+    <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">INTRADAY · GC DEC26</span>
+  </div>
+  <div style="flex:1;padding:24px 26px;display:flex;flex-direction:column;gap:22px;min-height:0">
+    <div style="display:flex;flex-direction:column;gap:11px;flex:none">
+      <div style="display:grid;grid-template-columns:96px repeat(5,1fr);gap:9px">
+        <span></span>
+        <sc-for list="{{ slotNames }}" as="n" hint-placeholder-count="5"><span style="font:400 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45);text-align:center">{{ n }}</span></sc-for>
+      </div>
+      <sc-for list="{{ gridRows }}" as="row" hint-placeholder-count="4">
+        <div style="display:grid;grid-template-columns:96px repeat(5,1fr);gap:9px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:3px"><span style="font:400 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">{{ row.day }}</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.32)">{{ row.chg }}</span></div>
+          <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="5">
+            <div style="height:110px;border-radius:9px;border:1px solid {{ c.border }};background:{{ c.bg }};position:relative;overflow:hidden">
+              <sc-if value="{{ c.hasImg }}" hint-placeholder-val="{{ true }}"><img src="{{ c.img }}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:10% 44%;display:block;opacity:{{ c.opacity }}"></sc-if>
+              <span style="position:absolute;left:8px;bottom:7px;padding:3px 6px;border-radius:4px;background:rgba(10,11,12,.75);font:400 9px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.8)">{{ c.tag }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:12px;min-height:0">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">TIMELINE · 28 AUG</span><span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">เลื่อนเพื่อไล่ดูภาพ 5 ช่วงต่อเนื่องกันในวันเดียว</span></div>
+      <div style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:#131619;padding:18px 20px;display:flex;flex-direction:column;gap:16px;min-height:0">
+        <div style="flex:1;display:flex;gap:10px;min-height:0">
+          <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="5">
+            <div style="flex:{{ t.flex }};border-radius:9px;border:1px solid {{ t.border }};background:#fff;position:relative;overflow:hidden;min-width:0">
+              <img src="{{ t.img }}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:12% 44%;display:block">
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:11px 12px;background:linear-gradient(180deg,rgba(10,11,12,.72),rgba(10,11,12,.1) 45%,rgba(10,11,12,.75))">
+                <span style="font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:{{ t.color }}">{{ t.name }}</span>
+                <span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.7)">{{ t.time }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="height:34px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;padding:0 6px;gap:4px;flex:none">
+          <sc-for list="{{ scrub }}" as="s" hint-placeholder-count="20"><span style="flex:1;height:{{ s.h }};border-radius:2px;background:{{ s.c }}"></span></sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1f"><div class="dv-olabel"><span class="dv-oid">1f</span>กราฟสรุป — Intraday เทียบกับ OI</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0f1113">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:60px;border-bottom:1px solid rgba(255,255,255,.07);background:#111417;flex:none">
+    <div style="display:flex;align-items:center;gap:16px">
+      <span style="font:400 16px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">กราฟสรุป</span>
+      <div style="display:flex;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden">
+        <span style="padding:8px 13px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">7 วัน</span>
+        <span style="padding:8px 13px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c;background:#d9b26a">30 วัน</span>
+        <span style="padding:8px 13px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55)">ทั้งหมด</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:16px;height:2px;background:#d9b26a"></span><span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">ราคา Intraday</span></div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:16px;height:2px;background:#6f9fd8"></span><span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">Open Interest</span></div>
+      <span style="padding:9px 14px;border:1px solid rgba(255,255,255,.1);border-radius:8px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">ส่งออกภาพ</span>
+    </div>
+  </div>
+  <div style="flex:1;padding:24px 26px;display:flex;flex-direction:column;gap:20px;min-height:0">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;flex:none">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div style="padding:16px 17px;border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:9px">
+          <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.12em">{{ k.k }}</span>
+          <span style="font:400 25px/1 'IBM Plex Mono',monospace;color:#edeae4">{{ k.v }}</span>
+          <span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:{{ k.color }}">{{ k.sub }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:#131619;padding:20px 22px;display:flex;flex-direction:column;gap:14px;min-height:0">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;flex:none">
+        <span style="font:400 14px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ราคา Intraday เทียบกับ Open Interest — รายช่วงเวลา</span>
+        <span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35)">CORRELATION +0.62</span>
+      </div>
+      <div style="flex:1;position:relative;min-height:0">{{ chart }}</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:9px;flex:none">
+        <sc-for list="{{ slotNames }}" as="n" hint-placeholder-count="5"><span style="font:400 10.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.38);text-align:center">{{ n }}</span></sc-for>
+      </div>
+    </div>
+    <div style="height:196px;display:grid;grid-template-columns:1.35fr 1fr;gap:14px;flex:none">
+      <div style="border-radius:12px;border:1px solid rgba(255,255,255,.09);background:#131619;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">OI Chg ตามช่วงเวลา (ค่าเฉลี่ย 30 วัน)</span>
+        <div style="flex:1;display:flex;align-items:center;gap:14px">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="5">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:center">
+              <div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;gap:2px">
+                <div style="height:{{ b.up }};background:#d9b26a;border-radius:3px 3px 0 0;align-self:stretch"></div>
+                <div style="height:{{ b.down }};background:rgba(111,159,216,.6);border-radius:0 0 3px 3px;align-self:stretch"></div>
+              </div>
+              <span style="font:400 10.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.45)">{{ b.name }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="border-radius:12px;border:1px solid rgba(217,178,106,.2);background:linear-gradient(160deg,rgba(217,178,106,.1),rgba(217,178,106,.02));padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:13px;height:13px;background:#d9b26a;transform:rotate(45deg);border-radius:3px"></div><span style="font:500 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">ข้อสังเกตจากชุดข้อมูล</span></div>
+        <p style="margin:0;font:300 13px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.78);text-wrap:pretty">ช่วง “ค่ำ” เป็นช่วงที่ OI เพิ่มมากที่สุดใน 21 จาก 30 วัน และเป็นช่วงเดียวที่ทิศทาง OI สอดคล้องกับราคาวันถัดไปเกิน 60%</p>
+        <span style="font:400 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">ถาม AI ต่อเรื่องนี้ →</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1g"><div class="dv-olabel"><span class="dv-oid">1g</span>ตั้งค่า / โปรไฟล์</div>
+<div class="dv-card" style="width:1440px;height:900px;display:flex;flex-direction:column;background:#0f1113">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 26px;height:60px;border-bottom:1px solid rgba(255,255,255,.07);background:#111417;flex:none">
+    <span style="font:400 16px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ตั้งค่า</span>
+    <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">SAVED 21:04</span>
+  </div>
+  <div style="flex:1;display:flex;min-height:0">
+    <div style="width:212px;border-right:1px solid rgba(255,255,255,.07);background:#111417;padding:20px 14px;display:flex;flex-direction:column;gap:4px;flex:none">
+      <sc-for list="{{ settingsNav }}" as="s" hint-placeholder-count="5">
+        <span style="padding:10px 12px;border-radius:8px;background:{{ s.bg }};font:400 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:{{ s.color }}">{{ s.name }}</span>
+      </sc-for>
+    </div>
+    <div style="flex:1;padding:26px 34px;display:flex;flex-direction:column;gap:18px;min-width:0;max-width:820px;overflow:auto;min-height:0">
+      <div style="display:flex;align-items:center;gap:18px;padding:16px 20px;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);flex:none">
+        <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(140deg,#3a3f45,#22262a);border:1px solid rgba(255,255,255,.12);flex:none"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <span style="font:400 16px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ธนกฤต ว.</span>
+          <span style="font:400 11.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">thanakrit@gmail.com · เชื่อมต่อผ่าน Google</span>
+        </div>
+        <span style="padding:9px 14px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font:400 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.65)">จัดการบัญชี</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">ช่วงเวลาบันทึก</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ slotSettings }}" as="s" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:14px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)">
+              <span style="width:56px;font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85)">{{ s.name }}</span>
+              <span style="padding:7px 11px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font:400 11.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.7)">{{ s.from }}</span>
+              <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.3)">→</span>
+              <span style="padding:7px 11px;border-radius:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font:400 11.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.7)">{{ s.to }}</span>
+              <div style="flex:1"></div>
+              <span style="font:300 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">เตือน {{ s.remind }}</span>
+              <div style="width:36px;height:20px;border-radius:12px;background:{{ s.toggleBg }};display:flex;align-items:center;padding:2px;justify-content:{{ s.toggleJustify }}"><div style="width:16px;height:16px;border-radius:50%;background:{{ s.knob }}"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.35);letter-spacing:.14em">ผู้ช่วย AI และข้อมูล</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ prefs }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:16px;padding:12px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02)">
+              <div style="flex:1;display:flex;flex-direction:column;gap:5px"><span style="font:400 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85)">{{ p.name }}</span><span style="font:300 11.5px/1.5 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.42)">{{ p.desc }}</span></div>
+              <div style="width:36px;height:20px;border-radius:12px;background:{{ p.toggleBg }};display:flex;align-items:center;padding:2px;justify-content:{{ p.toggleJustify }};flex:none"><div style="width:16px;height:16px;border-radius:50%;background:{{ p.knob }}"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex:none;padding-bottom:4px">
+        <span style="padding:12px 18px;border-radius:9px;background:#d9b26a;font:500 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c">ส่งออกชุดข้อมูลทั้งหมด</span>
+        <span style="padding:12px 18px;border-radius:9px;border:1px solid rgba(255,255,255,.12);font:400 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.6)">สำรองไป Google Drive</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div class="dv-opt" id="1h"><div class="dv-olabel"><span class="dv-oid">1h</span>Mobile — ล็อกอิน, จดบันทึกเร็ว, แชท AI (390 × 844)</div>
+<div style="display:flex;gap:24px">
+  <div class="dv-card" style="width:390px;height:844px;background:radial-gradient(120% 60% at 20% 0%, rgba(217,178,106,.12), transparent 62%),#0d0f11;display:flex;flex-direction:column;border-radius:34px">
+    <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex:none"><span style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.75)">21:04</span><div style="display:flex;gap:5px"><span style="width:16px;height:9px;border:1px solid rgba(237,234,228,.5);border-radius:2px"></span></div></div>
+    <div style="flex:1;padding:0 28px 34px;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="display:flex;flex-direction:column;gap:30px;padding-top:56px">
+        <div style="width:44px;height:44px;background:#d9b26a;transform:rotate(45deg);border-radius:9px"></div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <h1 style="margin:0;font:300 33px/1.4 'IBM Plex Sans Thai',sans-serif;color:#edeae4">บันทึกภาพ<br>ตลาดทองคำ<br><span style="color:#d9b26a">วันละ 5 ช่วง</span></h1>
+          <p style="margin:0;font:300 14px/1.85 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.5);text-wrap:pretty">แคปจากมือถือได้ทันที AI ช่วยถอดตัวเลขและจดโน้ตให้</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <button style="display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:17px;background:#f5f2ec;border:none;border-radius:14px;font:500 15px/1 'IBM Plex Sans Thai',sans-serif;color:#1a1c1e">
+          <span style="width:20px;height:20px;border:1px dashed rgba(0,0,0,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font:500 11px/1 'IBM Plex Mono',monospace;color:rgba(0,0,0,.5)">G</span>
+          ดำเนินการต่อด้วย Google
+        </button>
+        <button style="width:100%;padding:16px;background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:14px;font:400 14.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.75)">เข้าสู่ระบบด้วยอีเมล</button>
+        <p style="margin:0;font:300 11.5px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.32);text-align:center">ยอมรับ <a href="#1h">เงื่อนไข</a> และ <a href="#1h">นโยบายข้อมูล</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dv-card" style="width:390px;height:844px;background:#0f1113;display:flex;flex-direction:column;border-radius:34px">
+    <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex:none"><span style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.75)">21:04</span><span style="width:16px;height:9px;border:1px solid rgba(237,234,228,.5);border-radius:2px"></span></div>
+    <div style="padding:6px 22px 16px;display:flex;align-items:center;justify-content:space-between;flex:none">
+      <div style="display:flex;flex-direction:column;gap:4px"><span style="font:400 19px/1.2 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ค่ำ · 19:00–23:00</span><span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">28 AUG 2026 · GC DEC26</span></div>
+      <span style="padding:6px 11px;border-radius:20px;background:rgba(217,178,106,.14);font:400 10.5px/1 'IBM Plex Mono',monospace;color:#d9b26a">2/3</span>
+    </div>
+    <div style="padding:0 22px 10px;display:flex;gap:6px;flex:none">
+      <sc-for list="{{ slotSteps }}" as="s" hint-placeholder-count="5">
+        <div style="flex:1;padding:9px 6px;border-radius:9px;background:{{ s.bg }};border:1px solid {{ s.border }};display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="font:500 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:{{ s.color }}">{{ s.name }}</span>
+          <div style="display:flex;gap:2px;width:100%"><sc-for list="{{ s.dots }}" as="c" hint-placeholder-count="3"><span style="flex:1;height:3px;border-radius:2px;background:{{ c }}"></span></sc-for></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex:1;padding:12px 22px 0;display:flex;flex-direction:column;gap:12px;min-height:0;overflow:hidden">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:500 12.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">Intraday</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:#7fbf9b">UPLOADED</span></div>
+        <div style="height:132px;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:#fff;position:relative;overflow:hidden"><img loading="lazy" decoding="async" src="shots/intraday28-lg.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;object-position:10% 44%"><span style="position:absolute;left:10px;bottom:9px;padding:4px 8px;border-radius:5px;background:rgba(10,11,12,.78);font:400 9.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.85);letter-spacing:.08em">INTRADAY CAPTURE</span></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <span style="font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">OI</span>
+          <div style="height:94px;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:#fff;overflow:hidden"><img loading="lazy" decoding="async" src="shots/oi28-lg.png" alt="" style="width:100%;height:100%;object-fit:cover;object-position:8% 42%;display:block;object-position:10% 44%"></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <span style="font:500 12px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">OI Chg</span>
+          <div style="height:94px;border-radius:12px;border:1px dashed rgba(217,178,106,.45);background:rgba(217,178,106,.05);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px"><span style="width:26px;height:26px;border-radius:50%;border:1px solid rgba(217,178,106,.5);display:flex;align-items:center;justify-content:center;font:400 14px/1 'IBM Plex Mono',monospace;color:#d9b26a">+</span><span style="font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(217,178,106,.8)">ถ่าย/เลือกภาพ</span></div>
+        </div>
+      </div>
+      <div style="padding:13px 14px;border-radius:12px;background:linear-gradient(160deg,rgba(217,178,106,.12),rgba(217,178,106,.03));border:1px solid rgba(217,178,106,.2);display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center;gap:8px"><div style="width:12px;height:12px;background:#d9b26a;transform:rotate(45deg);border-radius:3px"></div><span style="font:500 11.5px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">AI ถอดตัวเลขให้แล้ว</span></div>
+        <p style="margin:0;font:300 12.5px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.78)">Call OI 184,220 (+1,820) · Put OI 176,940 (−640) · P/C 0.96</p>
+        <span style="font:400 11px/1 'IBM Plex Sans Thai',sans-serif;color:#d9b26a">ยืนยันและเติมลงโน้ต →</span>
+      </div>
+    </div>
+    <div style="padding:14px 22px 26px;display:flex;gap:10px;flex:none;border-top:1px solid rgba(255,255,255,.07);margin-top:12px">
+      <span style="flex:1;padding:16px;border-radius:13px;background:#d9b26a;font:500 14px/1 'IBM Plex Sans Thai',sans-serif;color:#14110c;text-align:center">บันทึกช่วงค่ำ</span>
+      <span style="width:52px;border-radius:13px;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font:400 16px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.6)">…</span>
+    </div>
+  </div>
+
+  <div class="dv-card" style="width:390px;height:844px;background:#0f1113;display:flex;flex-direction:column;border-radius:34px">
+    <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex:none"><span style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.75)">21:06</span><span style="width:16px;height:9px;border:1px solid rgba(237,234,228,.5);border-radius:2px"></span></div>
+    <div style="padding:6px 22px 16px;display:flex;align-items:center;gap:11px;flex:none;border-bottom:1px solid rgba(255,255,255,.07)">
+      <div style="width:15px;height:15px;background:#d9b26a;transform:rotate(45deg);border-radius:3px"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font:400 15px/1 'IBM Plex Sans Thai',sans-serif;color:#edeae4">ผู้ช่วยวิจัย</span><span style="font:300 10.5px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">เห็นภาพและโน้ตทั้งหมดของคุณ</span></div>
+    </div>
+    <div style="flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-height:0;overflow:hidden">
+      <div style="align-self:flex-end;max-width:84%;padding:12px 14px;border-radius:14px 14px 4px 14px;background:rgba(255,255,255,.07)"><p style="margin:0;font:300 13px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85)">ช่วงค่ำสัปดาห์นี้ OI เพิ่มทุกวันไหม</p></div>
+      <div style="max-width:92%;padding:13px 14px;border-radius:14px 14px 14px 4px;background:linear-gradient(160deg,rgba(217,178,106,.12),rgba(217,178,106,.03));border:1px solid rgba(217,178,106,.2);display:flex;flex-direction:column;gap:11px">
+        <p style="margin:0;font:300 13px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85);text-wrap:pretty">4 จาก 5 วันครับ · เฉลี่ย +1,340 สัญญาต่อคืน วันที่สวนทางคือ 26 ส.ค. (−410)</p>
+        <div style="display:flex;align-items:flex-end;gap:5px;height:56px">
+          <sc-for list="{{ miniBars }}" as="b" hint-placeholder-count="5"><div style="flex:1;height:{{ b.h }};background:{{ b.c }};border-radius:3px"></div></sc-for>
+        </div>
+      </div>
+      <div style="align-self:flex-end;max-width:84%;padding:12px 14px;border-radius:14px 14px 4px 14px;background:rgba(255,255,255,.07)"><p style="margin:0;font:300 13px/1.75 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.85)">จดสมมติฐานนี้ไว้ให้ด้วย</p></div>
+      <div style="max-width:92%;padding:13px 14px;border-radius:14px 14px 14px 4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)"><p style="margin:0;font:300 13px/1.8 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.8)">บันทึกไว้ในโน้ตวันที่ 28 ส.ค. แล้ว พร้อมแท็ก #สมมติฐาน-ค่ำ</p></div>
+    </div>
+    <div style="padding:12px 20px 26px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:11px;flex:none">
+      <div style="display:flex;gap:7px;overflow:hidden">
+        <span style="padding:7px 11px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55);white-space:nowrap">สรุปทั้งวัน</span>
+        <span style="padding:7px 11px;border-radius:20px;border:1px solid rgba(255,255,255,.1);font:300 11px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.55);white-space:nowrap">หาวันที่คล้ายกัน</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)">
+        <span style="font:400 14px/1 'IBM Plex Mono',monospace;color:rgba(237,234,228,.4)">+</span>
+        <span style="flex:1;font:300 13px/1 'IBM Plex Sans Thai',sans-serif;color:rgba(237,234,228,.4)">ถามหรือส่งภาพ</span>
+        <span style="width:30px;height:30px;border-radius:9px;background:#d9b26a;display:flex;align-items:center;justify-content:center;font:400 13px/1 'IBM Plex Mono',monospace;color:#14110c">↑</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">ลองสั่งต่อได้: “ทำหน้าเปรียบเทียบให้เป็นตารางเป็นค่าเริ่มต้น” · “เพิ่มหน้ารายงานสรุปรายสัปดาห์” · “ปรับโทนให้สว่าง (light mode)”</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showAiInsights&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;AI&quot;}}">
+const GOLD = '#d9b26a', TXT = '#edeae4';
+const SHOT = {
+  intraday28: 'shots/intraday28-sm.png',
+  oi28: 'shots/oi28-sm.png',
+  oichg28: 'shots/oichg28-sm.png',
+  intraday27: 'shots/intraday27-sm.png',
+  oi27: 'shots/oi27-sm.png',
+  oichg27: 'shots/oichg27-sm.png',
+};
+const SHOT_CYCLE = [SHOT.intraday28, SHOT.intraday27, SHOT.oi28, SHOT.oi27, SHOT.oichg28, SHOT.oichg27];
+const SLOTS = [
+  { name: 'เช้า', time: '06–11' },
+  { name: 'บ่าย', time: '11–15' },
+  { name: 'เย็น', time: '15–19' },
+  { name: 'ค่ำ', time: '19–23' },
+  { name: 'ดึก', time: '23–03' },
+];
+class Component extends DCLogic {
+  buildDays() {
+    const out = [];
+    for (let i = 0; i < 5; i++) out.push({ n: '', count: '', dots: [], bg: 'transparent', border: 'transparent', color: 'transparent' });
+    const seeds = [3,3,2,3,3,0,0, 3,3,3,1,3,0,0, 3,2,3,3,3,0,0, 3,3,3,3,2,0,0, 3,3,3];
+    for (let d = 1; d <= 31; d++) {
+      const dow = (d + 4) % 7; // Aug 1 2026 = Saturday
+      const weekend = dow === 5 || dow === 6;
+      const full = !weekend && seeds[d - 1] === 3;
+      const partial = !weekend && seeds[d - 1] > 0 && seeds[d - 1] < 3;
+      const future = d > 30;
+      const dots = SLOTS.map((_, i) => {
+        if (weekend || future) return 'rgba(255,255,255,.06)';
+        if (full) return GOLD;
+        if (partial && i < 3) return 'rgba(217,178,106,.35)';
+        return 'rgba(255,255,255,.08)';
+      });
+      out.push({
+        n: String(d),
+        count: weekend || future ? '' : (full ? '15' : partial ? '9' : '0'),
+        dots,
+        bg: d === 30 ? 'rgba(217,178,106,.10)' : weekend ? 'rgba(255,255,255,.015)' : 'rgba(255,255,255,.03)',
+        border: d === 30 ? 'rgba(217,178,106,.45)' : 'rgba(255,255,255,.07)',
+        color: weekend ? 'rgba(237,234,228,.3)' : d === 30 ? GOLD : 'rgba(237,234,228,.8)',
+      });
+    }
+    return out;
+  }
+  chartEl() {
+    const price = '0,196 100,172 200,208 300,150 400,138 500,166 600,118 700,92 800,126 900,80 1000,58';
+    const oi = '0,128 100,140 200,116 300,132 400,108 500,124 600,98 700,112 800,86 900,96 1000,72';
+    const grid = [0, 1, 2, 3, 4].map(i =>
+      React.createElement('line', { key: 'g' + i, x1: 0, x2: 1000, y1: 20 + i * 50, y2: 20 + i * 50, stroke: 'rgba(255,255,255,.055)', strokeWidth: 1 })
+    );
+    const vsep = [1, 2, 3, 4].map(i =>
+      React.createElement('line', { key: 'v' + i, x1: i * 200, x2: i * 200, y1: 0, y2: 240, stroke: 'rgba(255,255,255,.04)', strokeWidth: 1 })
+    );
+    return React.createElement('svg', {
+      viewBox: '0 0 1000 240', preserveAspectRatio: 'none',
+      style: { width: '100%', height: '100%', display: 'block' },
+    }, [
+      ...grid, ...vsep,
+      React.createElement('polyline', { key: 'oi', points: oi, fill: 'none', stroke: '#6f9fd8', strokeWidth: 2, strokeDasharray: '6 5', strokeLinejoin: 'round' }),
+      React.createElement('polyline', { key: 'p', points: price, fill: 'none', stroke: GOLD, strokeWidth: 2.4, strokeLinejoin: 'round' }),
+    ]);
+  }
+  renderVals() {
+    const showAi = this.props.showAiInsights ?? true;
+    return {
+      showAi,
+      chart: this.chartEl(),
+      dow: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+      days: this.buildDays(),
+      slotNames: SLOTS.map(s => s.name),
+      todaySlots: SLOTS.map((s, i) => {
+        const done = i < 3, active = i === 3;
+        return {
+          name: s.name, time: s.time,
+          stat: done ? '3/3' : active ? 'ถึงเวลา' : '—',
+          statColor: done ? 'rgba(127,191,155,.9)' : active ? GOLD : 'rgba(237,234,228,.3)',
+          color: active ? GOLD : 'rgba(237,234,228,.8)',
+          bg: active ? 'rgba(217,178,106,.10)' : 'rgba(255,255,255,.03)',
+          border: active ? 'rgba(217,178,106,.35)' : 'rgba(255,255,255,.07)',
+        };
+      }),
+      slotSteps: SLOTS.map((s, i) => {
+        const active = i === 3;
+        const filled = i < 3 ? 3 : i === 3 ? 2 : 0;
+        return {
+          name: s.name, time: s.time,
+          color: active ? GOLD : 'rgba(237,234,228,.8)',
+          bg: active ? 'rgba(217,178,106,.10)' : 'rgba(255,255,255,.03)',
+          border: active ? 'rgba(217,178,106,.4)' : 'rgba(255,255,255,.07)',
+          dots: [0, 1, 2].map(k => (k < filled ? (active ? GOLD : 'rgba(217,178,106,.55)') : 'rgba(255,255,255,.09)')),
+        };
+      }),
+      extracted: [
+        { k: 'ราคาปิดช่วง', v: '3,428.4', color: TXT },
+        { k: 'Call OI', v: '184,220', color: '#7fbf9b' },
+        { k: 'Put OI', v: '176,940', color: '#d98080' },
+        { k: 'OI Chg รวม', v: '+1,180', color: '#7fbf9b' },
+        { k: 'P/C Ratio', v: '0.96', color: TXT },
+      ],
+      library: [
+        { day: '28 ส.ค.', slot: 'EVENING · 19:00', bg: 'rgba(217,178,106,.10)', border: 'rgba(217,178,106,.35)', img: SHOT.intraday28 },
+        { day: '25 ส.ค.', slot: 'EVENING · 19:00', bg: 'rgba(217,178,106,.10)', border: 'rgba(217,178,106,.35)', img: SHOT.intraday27 },
+        { day: '27 ส.ค.', slot: 'NIGHT · 23:00', bg: 'rgba(255,255,255,.02)', border: 'rgba(255,255,255,.07)', img: SHOT.oi28 },
+        { day: '27 ส.ค.', slot: 'AFTERNOON · 11:00', bg: 'rgba(255,255,255,.02)', border: 'rgba(255,255,255,.07)', img: SHOT.oi27 },
+        { day: '26 ส.ค.', slot: 'MORNING · 06:00', bg: 'rgba(255,255,255,.02)', border: 'rgba(255,255,255,.07)', img: SHOT.oichg27 },
+      ],
+      diffStats: [
+        { k: 'PRICE RANGE', v: '18.6 vs 21.2', sub: 'กว้างขึ้น +14%', color: TXT },
+        { k: 'CALL OI CHG', v: '+680 / +1,820', sub: 'สะสมมากกว่า 2.6×', color: '#7fbf9b' },
+        { k: 'PUT OI CHG', v: '+920 / −640', sub: 'พลิกทิศ', color: '#d98080' },
+        { k: 'P/C RATIO', v: '1.08 → 0.96', sub: 'เอียงขึ้นอ่อน', color: GOLD },
+      ],
+      gridRows: ['25 ส.ค.', '26 ส.ค.', '27 ส.ค.', '28 ส.ค.'].map((day, r) => ({
+        day,
+        chg: ['−0.4%', '+0.2%', '+0.8%', '+0.5%'][r],
+        cells: SLOTS.map((s, i) => {
+          const hi = (r === 3 && i === 3) || (r === 0 && i === 3);
+          const empty = r === 1 && i === 4;
+          return {
+            tag: empty ? 'NO DATA' : s.time,
+            hasImg: !empty,
+            img: empty ? SHOT.oi28 : SHOT_CYCLE[(r * 5 + i) % SHOT_CYCLE.length],
+            opacity: empty ? 0 : hi ? 1 : 0.66,
+            bg: empty ? 'rgba(255,255,255,.015)' : '#fff',
+            border: hi ? 'rgba(217,178,106,.45)' : empty ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.08)',
+          };
+        }),
+      })),
+      timeline: SLOTS.map((s, i) => ({
+        name: s.name,
+        time: s.time,
+        flex: i === 3 ? 2.1 : 1,
+        color: i === 3 ? GOLD : 'rgba(237,234,228,.9)',
+        img: SHOT_CYCLE[i % SHOT_CYCLE.length],
+        border: i === 3 ? 'rgba(217,178,106,.45)' : 'rgba(255,255,255,.08)',
+      })),
+      scrub: Array.from({ length: 24 }, (_, i) => ({
+        h: (8 + ((i * 7) % 13)) + 'px',
+        c: i >= 12 && i <= 17 ? GOLD : 'rgba(255,255,255,.14)',
+      })),
+      kpis: [
+        { k: 'IMAGES CAPTURED', v: '1,284', sub: '+45 สัปดาห์นี้', color: '#7fbf9b' },
+        { k: 'COMPLETE DAYS', v: '72 / 86', sub: 'ครบทั้ง 5 ช่วง', color: 'rgba(237,234,228,.45)' },
+        { k: 'AVG OI CHG', v: '+1,340', sub: 'ช่วงค่ำสูงสุด', color: GOLD },
+        { k: 'P/C RATIO', v: '0.96', sub: 'ต่ำสุดใน 12 วัน', color: '#d98080' },
+      ],
+      bars: SLOTS.map((s, i) => ({
+        name: s.name,
+        up: [30, 22, 44, 62, 26][i] + '%',
+        down: [14, 26, 12, 8, 30][i] + '%',
+      })),
+      miniBars: [
+        { h: '62%', c: GOLD }, { h: '40%', c: GOLD }, { h: '22%', c: 'rgba(217,127,127,.65)' },
+        { h: '78%', c: GOLD }, { h: '92%', c: GOLD },
+      ],
+      settingsNav: ['โปรไฟล์', 'ช่วงเวลาบันทึก', 'ผู้ช่วย AI', 'ข้อมูลและการส่งออก', 'การแจ้งเตือน'].map((name, i) => ({
+        name,
+        bg: i === 0 ? 'rgba(217,178,106,.12)' : 'transparent',
+        color: i === 0 ? GOLD : 'rgba(237,234,228,.6)',
+      })),
+      slotSettings: SLOTS.map((s, i) => {
+        const on = i !== 4;
+        return {
+          name: s.name,
+          from: ['06:00', '11:00', '15:00', '19:00', '23:00'][i],
+          to: ['11:00', '15:00', '19:00', '23:00', '03:00'][i],
+          remind: ['06:15', '11:15', '15:15', '19:15', '23:15'][i],
+          toggleBg: on ? GOLD : 'rgba(255,255,255,.12)',
+          toggleJustify: on ? 'flex-end' : 'flex-start',
+          knob: on ? '#14110c' : 'rgba(237,234,228,.6)',
+        };
+      }),
+      prefs: [
+        { name: 'ให้ AI อ่านตัวเลขจากภาพอัตโนมัติ', desc: 'ถอด Call/Put OI และ OI Chg ทันทีที่อัปโหลด', on: true },
+        { name: 'สรุปประจำวันตอนปิดช่วงดึก', desc: 'ส่งสรุป 5 ช่วงเข้าอีเมลทุกเช้า', on: true },
+        { name: 'เตือนเมื่อบันทึกไม่ครบ', desc: 'แจ้งเตือนถ้าเลยเวลาช่วงไป 30 นาทีแล้วยังไม่มีภาพ', on: true },
+        { name: 'ใช้ข้อมูลของฉันปรับปรุงโมเดล', desc: 'ปิดไว้เป็นค่าเริ่มต้นสำหรับงานวิจัย', on: false },
+      ].map(p => ({
+        name: p.name, desc: p.desc,
+        toggleBg: p.on ? GOLD : 'rgba(255,255,255,.12)',
+        toggleJustify: p.on ? 'flex-end' : 'flex-start',
+        knob: p.on ? '#14110c' : 'rgba(237,234,228,.6)',
+      })),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
