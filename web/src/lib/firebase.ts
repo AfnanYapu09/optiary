@@ -90,12 +90,20 @@ export async function testConnection(): Promise<boolean> {
 // Run test connection
 void testConnection();
 
-export async function signInWithGoogle(): Promise<FirebaseUser> {
+export async function signInWithGoogle(): Promise<FirebaseUser | null> {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (err: any) {
-    console.error("Google Sign-In failed:", err);
+    if (
+      err?.code === "auth/popup-closed-by-user" ||
+      err?.code === "auth/cancelled-popup-request" ||
+      err?.message?.includes("popup-closed-by-user")
+    ) {
+      // User closed the popup window or cancelled login flow
+      return null;
+    }
+    console.warn("Google Sign-In notice:", err?.message || err);
     throw err;
   }
 }
@@ -111,19 +119,22 @@ export type { FirebaseUser };
  * Online Cloud Storage: Sync and Persist Entry to Cloud Firestore
  */
 export async function syncEntryToCloud(
-  userId: string,
+  _userId: string,
   date: string,
   slot: string,
   data: { note?: string; tags?: string[]; metrics?: any },
 ): Promise<void> {
+  const currentFbUser = auth.currentUser;
+  if (!currentFbUser) return;
+  const targetUid = currentFbUser.uid;
   const entryId = `${date}_${slot}`;
-  const path = `users/${userId}/entries/${entryId}`;
+  const path = `users/${targetUid}/entries/${entryId}`;
   try {
-    const docRef = doc(db, "users", userId, "entries", entryId);
+    const docRef = doc(db, "users", targetUid, "entries", entryId);
     await setDoc(
       docRef,
       {
-        userId,
+        userId: targetUid,
         date,
         slot,
         note: data.note ?? "",
@@ -142,16 +153,19 @@ export async function syncEntryToCloud(
  * Online Cloud Storage: Save Chat Message to Cloud Firestore
  */
 export async function saveChatMessageToCloud(
-  userId: string,
+  _userId: string,
   role: "user" | "assistant",
   content: string,
 ): Promise<void> {
+  const currentFbUser = auth.currentUser;
+  if (!currentFbUser) return;
+  const targetUid = currentFbUser.uid;
   const messageId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const path = `users/${userId}/messages/${messageId}`;
+  const path = `users/${targetUid}/messages/${messageId}`;
   try {
-    const docRef = doc(db, "users", userId, "messages", messageId);
+    const docRef = doc(db, "users", targetUid, "messages", messageId);
     await setDoc(docRef, {
-      userId,
+      userId: targetUid,
       role,
       content,
       createdAt: new Date().toISOString(),
@@ -165,21 +179,24 @@ export async function saveChatMessageToCloud(
  * Online Cloud Storage: Save User Profile to Cloud Firestore
  */
 export async function saveUserProfileToCloud(user: {
-  id: string;
+  id?: string;
   email: string;
   name: string;
   settings?: any;
 }): Promise<void> {
-  const path = `users/${user.id}`;
+  const currentFbUser = auth.currentUser;
+  if (!currentFbUser) return;
+  const targetUid = currentFbUser.uid;
+  const path = `users/${targetUid}`;
   try {
-    const docRef = doc(db, "users", user.id);
+    const docRef = doc(db, "users", targetUid);
     const existing = await getDoc(docRef);
     const now = new Date().toISOString();
     if (!existing.exists()) {
       await setDoc(docRef, {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
+        userId: targetUid,
+        email: user.email || currentFbUser.email || "",
+        name: user.name || currentFbUser.displayName || "Trader",
         settings: user.settings ?? {},
         createdAt: now,
         updatedAt: now,
@@ -188,7 +205,7 @@ export async function saveUserProfileToCloud(user: {
       await setDoc(
         docRef,
         {
-          name: user.name,
+          name: user.name || currentFbUser.displayName || "Trader",
           settings: user.settings ?? {},
           updatedAt: now,
         },

@@ -52,6 +52,10 @@ export default function LoginPage() {
     setGoogleBusy(true);
     try {
       const fbUser = await signInWithGoogle();
+      if (!fbUser) {
+        // User closed or dismissed the popup
+        return;
+      }
       const idToken = await fbUser.getIdToken();
       const loginRes = await api.firebaseLogin({
         sub: fbUser.uid,
@@ -68,10 +72,18 @@ export default function LoginPage() {
       await refresh();
       toast("เข้าสู่ระบบด้วย Google สำเร็จ!", "ok");
     } catch (err: any) {
-      console.error(err);
-      if (err?.code !== "auth/popup-closed-by-user") {
-        toast(err instanceof Error ? err.message : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ", "err");
+      if (
+        err?.code === "auth/popup-closed-by-user" ||
+        err?.code === "auth/cancelled-popup-request" ||
+        err?.message?.includes("popup-closed-by-user")
+      ) {
+        return;
       }
+      if (err?.code === "auth/popup-blocked") {
+        toast("เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัปหรือเปิดแอปในแท็บใหม่", "err");
+        return;
+      }
+      toast(err instanceof Error ? err.message : "เข้าสู่ระบบด้วย Google ไม่สำเร็จ", "err");
     } finally {
       setGoogleBusy(false);
     }

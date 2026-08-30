@@ -113,7 +113,7 @@ export function upsertGoogleUser(profile: {
     return rowToUser({ ...existing, name: profile.name, picture: profile.picture ?? null });
   }
 
-  const id = uid();
+  const id = profile.sub || uid();
   db.prepare(
     "INSERT INTO users (id, google_sub, email, name, picture, settings, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(
