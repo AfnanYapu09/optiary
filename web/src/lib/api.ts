@@ -14,6 +14,7 @@ import type {
   User,
   UserSettings,
 } from "./types.ts";
+import type { AuthConfig } from "./types.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -44,10 +45,11 @@ function json(method: string, body: unknown): RequestInit {
 }
 
 export const api = {
-  authConfig: () => request<{ google: boolean; devLogin: boolean; ai: boolean }>("/auth/config"),
+  authConfig: () => request<AuthConfig>("/auth/config"),
   me: () => request<{ user: User }>("/me"),
-  firebaseLogin: (profile: { sub?: string; uid?: string; email: string; name?: string; picture?: string; idToken?: string }) =>
-    request<{ user: User }>("/auth/firebase-login", json("POST", profile)),
+  /** The server derives the identity from the ID token; nothing else is trusted. */
+  firebaseLogin: (idToken: string) =>
+    request<{ user: User }>("/auth/firebase-login", json("POST", { idToken })),
   devLogin: (email?: string, name?: string) =>
     request<{ user: User }>("/auth/dev-login", json("POST", { email, name })),
   logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),

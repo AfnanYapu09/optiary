@@ -8,9 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, ApiError } from "./api.ts";
-import type { User, UserSettings } from "./types.ts";
-
-type AuthConfig = { google: boolean; devLogin: boolean; ai: boolean };
+import type { AuthConfig, User, UserSettings } from "./types.ts";
 
 type SessionValue = {
   user: User | null;

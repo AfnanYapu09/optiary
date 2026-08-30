@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { config } from "../config.js";
+import { config, firebaseAuthConfigured, googleOauthConfigured } from "../config.js";
 import {
   clearSessionCookie,
   exchangeGoogleCode,
@@ -13,12 +13,15 @@ import {
 } from "../auth.js";
 import { SLOTS } from "../domain.js";
 import { aiReady } from "../ai/client.js";
+import { FirebaseTokenError, verifyFirebaseIdToken } from "../firebase-token.js";
 
 export const authRoutes = Router();
 
 authRoutes.get("/auth/config", (_req, res) => {
   res.json({
     google: googleConfigured,
+    googleOauth: googleOauthConfigured,
+    firebase: firebaseAuthConfigured,
     devLogin: config.allowDevLogin,
     ai: aiReady(),
   });
@@ -32,26 +35,41 @@ authRoutes.get("/me", (req, res) => {
   res.json({ user: req.user, slots: SLOTS });
 });
 
-authRoutes.post("/auth/firebase-login", (req, res) => {
-  const { sub, uid, email, name, picture } = req.body ?? {};
-  if (!email || typeof email !== "string") {
-    res.status(400).json({ error: "email is required" });
+/**
+ * Completes a browser-side Firebase popup sign-in.
+ *
+ * The identity comes exclusively from the cryptographically verified ID token.
+ * Anything else in the body (email, uid, name) is attacker-controlled and is
+ * deliberately ignored — trusting it would let anyone mint a session as any
+ * user by posting their address.
+ */
+authRoutes.post("/auth/firebase-login", async (req, res) => {
+  if (!firebaseAuthConfigured) {
+    res.status(503).json({ error: "ยังไม่ได้ตั้งค่า Firebase บนเซิร์ฟเวอร์" });
     return;
   }
-  const googleSub = String(sub || uid || email);
-  const displayName = String(name || email.split("@")[0]);
-  const user = upsertGoogleUser({
-    sub: googleSub,
-    email,
-    name: displayName,
-    picture: picture ? String(picture) : undefined,
-  });
-  setSessionCookie(res, user.id);
-  res.json({ user, slots: SLOTS });
+  try {
+    const identity = await verifyFirebaseIdToken(req.body?.idToken);
+    const user = upsertGoogleUser({
+      sub: identity.sub,
+      email: identity.email,
+      name: identity.name ?? identity.email.split("@")[0],
+      picture: identity.picture,
+    });
+    setSessionCookie(res, user.id);
+    res.json({ user, slots: SLOTS });
+  } catch (error) {
+    if (error instanceof FirebaseTokenError) {
+      res.status(401).json({ error: error.message });
+      return;
+    }
+    console.error("firebase login failed", error);
+    res.status(500).json({ error: "เข้าสู่ระบบไม่สำเร็จ" });
+  }
 });
 
 authRoutes.get("/auth/google", (req, res) => {
-  if (!googleConfigured) {
+  if (!googleOauthConfigured) {
     res.status(503).json({ error: "google_not_configured" });
     return;
   }

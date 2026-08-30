@@ -7,39 +7,42 @@ Implementation of the Claude Design handoff in `design/` (see [Design handoff](#
 
 ## Stack
 
-| Layer    | Choice                                                                       |
-| -------- | ---------------------------------------------------------------------------- |
-| Frontend | React 18 + Vite + TypeScript, hand-written CSS matching the design tokens     |
-| Backend  | Node 22 + Express + TypeScript                                               |
-| Storage  | SQLite via the built-in `node:sqlite`; uploaded screenshots on local disk    |
-| Auth     | Google OAuth 2.0 (authorization code flow), HMAC-signed session cookie       |
-| AI       | Claude (`claude-opus-5`) via `@anthropic-ai/sdk`                              |
+| Layer    | Choice                                                                        |
+| -------- | ----------------------------------------------------------------------------- |
+| Frontend | React 18 + Vite + TypeScript, hand-written CSS matching the design tokens      |
+| Backend  | Node 22 + Express + TypeScript, one process serving both API and web           |
+| Storage  | SQLite via the built-in `node:sqlite`; uploaded screenshots on local disk      |
+| Auth     | Firebase Google sign-in or server-side Google OAuth; HMAC-signed session cookie |
+| Cloud    | Optional Firestore mirror of notes and profile                                 |
+| AI       | Claude (`claude-opus-5`) or Gemini, selected by which API key is set           |
 
-No native modules and no ORM — `npm install` is pure JavaScript.
+No native modules and no ORM — installing is pure JavaScript.
 
 ## Quick start
 
 ```bash
-npm install
-
-# Optional: load the sample QuikStrike screenshots from the design handoff
-# into a demo account so the app opens with realistic data.
-npm run seed
-
-npm run dev            # API on :4000, web on :5173
+npm install            # or: bun install (bun.lock is the checked-in lockfile)
+npm run dev            # everything on http://localhost:3000
 ```
 
-Open http://localhost:5173. Without `GOOGLE_CLIENT_ID` the login screen offers a
-local email sign-in (`demo@optiary.local` after seeding); with it, the Google
-button works for real.
+One process serves both halves: in development the server mounts Vite as
+middleware, so there is no separate web port. Open http://localhost:3000.
 
-Copy `.env.example` to `.env` for the full list of settings. The two that matter
-most:
+The database auto-seeds with the sample QuikStrike screenshots from the design
+handoff on first run, so the app opens with realistic data. Re-seed at any time
+with `npm run seed`.
 
-- `ANTHROPIC_API_KEY` — turns on screenshot number-extraction and the chatbot.
-  Without it the app runs fine; the AI features report that they are unconfigured.
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — real Google sign-in. Add
-  `http://localhost:4000/api/auth/google/callback` as an authorized redirect URI.
+Sign in with **"เข้าใช้งานแบบทดลอง (Local Demo)"** — no configuration needed.
+
+Copy `.env.example` to `.env` for the full list. The ones that matter:
+
+| Variable | Effect |
+| --- | --- |
+| `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` | Turns on screenshot number-extraction and the chatbot. Without either, the app runs fine and the AI features report themselves unconfigured. |
+| `FIREBASE_PROJECT_ID` | Enables Google sign-in via the Firebase popup. Falls back to `projectId` in `firebase-applet-config.json`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Enables the server-side OAuth route instead. Add `http://localhost:3000/api/auth/google/callback` as an authorized redirect URI. |
+| `SESSION_SECRET` | Required in production. Generated and cached under `DATA_DIR` in development. |
+| `ALLOW_DEV_LOGIN` | Local email sign-in. On by default in development, **off in production** — see below. |
 
 ### Production
 
@@ -48,9 +51,24 @@ npm run build          # builds web/dist and compiles server to server/dist
 NODE_ENV=production SESSION_SECRET=... npm start
 ```
 
-The API process serves `web/dist` when it exists, so a single process serves the
-whole app. `SESSION_SECRET` is required in production, and `ALLOW_DEV_LOGIN`
-defaults to off there.
+In production the server stops mounting Vite and serves the built `web/dist`
+instead, still as one process on `PORT` (default 3000).
+
+**Two things are deliberately off in production.** `SESSION_SECRET` must be
+supplied or the process refuses to start, and `ALLOW_DEV_LOGIN` defaults to
+false — dev login accepts any email with no credentials whatsoever, so enabling
+it on a reachable host would let anyone sign in as anyone. Set
+`ALLOW_DEV_LOGIN=true` there only if you fully intend that.
+
+### How sign-in is verified
+
+The Firebase popup runs entirely in the browser, so the server cannot take the
+client's word for who signed in. `/api/auth/firebase-login` accepts **only** a
+Firebase ID token, verifies its RS256 signature against Google's published
+certificates, and checks issuer, audience and expiry before minting a session
+(`server/src/firebase-token.ts`). Any email, uid or name in the request body is
+ignored — the identity comes from the verified token alone. No service-account
+key is needed, since verification uses Google's public certificates.
 
 ## Screens
 
@@ -91,7 +109,8 @@ All routes are under `/api` and require the session cookie except `/health`,
 GET    /health                             liveness
 GET    /auth/config                        which sign-in methods and AI are available
 GET    /me                                 current user + slot definitions
-GET    /auth/google → /auth/google/callback OAuth
+GET    /auth/google → /auth/google/callback server-side OAuth
+POST   /auth/firebase-login          exchange a verified Firebase ID token for a session
 POST   /auth/dev-login | /auth/logout
 
 GET    /calendar?month=YYYY-MM             per-day completeness + streak
@@ -131,8 +150,8 @@ the seed script loads. It is reference material, not part of the build.
 
 | Command                | Effect                                            |
 | ---------------------- | ------------------------------------------------- |
-| `npm run dev`          | API + web dev servers together                    |
+| `npm run dev`          | One process: API + Vite middleware on `PORT`       |
 | `npm run build`        | Production build of both                          |
 | `npm start`            | Run the built server (also serves `web/dist`)     |
-| `npm run seed`         | Load the sample screenshots into the demo account |
+| `npm run seed`         | Re-load the sample screenshots into the demo account |
 | `npm run typecheck`    | `tsc --noEmit` across both workspaces             |

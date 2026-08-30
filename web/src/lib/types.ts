@@ -142,3 +142,15 @@ export type CompareResult = {
   right: EntryRecord;
   deltas: Record<"priceClose" | "callOi" | "putOi" | "oiChgTotal" | "pcRatio", number | null>;
 };
+
+/** Which sign-in routes and AI features the server can actually complete. */
+export type AuthConfig = {
+  /** Any Google sign-in route is available. */
+  google: boolean;
+  /** Server-side OAuth code flow is configured. */
+  googleOauth: boolean;
+  /** Browser-side Firebase popup sign-in is configured. */
+  firebase: boolean;
+  devLogin: boolean;
+  ai: boolean;
+};

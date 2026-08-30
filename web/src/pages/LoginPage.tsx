@@ -47,6 +47,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
 
   const error = params.get("error");
+  const firebaseReady = config?.firebase ?? false;
 
   async function handleGoogleLogin() {
     setGoogleBusy(true);
@@ -56,15 +57,10 @@ export default function LoginPage() {
         // User closed or dismissed the popup
         return;
       }
+      // Only the signed token travels to the server — it derives the identity
+      // from that, so there is nothing else here worth sending.
       const idToken = await fbUser.getIdToken();
-      const loginRes = await api.firebaseLogin({
-        sub: fbUser.uid,
-        uid: fbUser.uid,
-        email: fbUser.email ?? "user@gmail.com",
-        name: fbUser.displayName ?? fbUser.email?.split("@")[0] ?? "Google User",
-        picture: fbUser.photoURL ?? undefined,
-        idToken,
-      });
+      const loginRes = await api.firebaseLogin(idToken);
       // Save profile in Cloud Firestore
       if (loginRes?.user) {
         await saveUserProfileToCloud(loginRes.user);
@@ -113,13 +109,20 @@ export default function LoginPage() {
       <button
         type="button"
         id="google-login-btn"
-        className="google-btn"
-        disabled={googleBusy}
+        className={`google-btn${firebaseReady ? "" : " disabled"}`}
+        disabled={googleBusy || !firebaseReady}
         onClick={() => void handleGoogleLogin()}
       >
         <GoogleMark />
         {googleBusy ? "กำลังเชื่อมต่อกับ Google…" : "ดำเนินการต่อด้วย Google"}
       </button>
+
+      {config && !firebaseReady ? (
+        <p className="login-hint">
+          เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า Firebase — ตั้ง <code>FIREBASE_PROJECT_ID</code> หรือวางไฟล์{" "}
+          <code>firebase-applet-config.json</code> เพื่อเปิดการเข้าสู่ระบบด้วย Google
+        </p>
+      ) : null}
 
       {config?.devLogin ? (
         <>

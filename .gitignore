@@ -1,5 +1,8 @@
 node_modules/
 dist/
+
+# bun.lock is the checked-in lockfile; npm's is a local by-product.
+package-lock.json
 .env
 .env.local
 

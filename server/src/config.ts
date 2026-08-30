@@ -35,10 +35,11 @@ export const config = {
   },
 
   /**
-   * Dev login lets you sign in without Google credentials. It is refused
-   * outright in production so a deployed instance can never be walked into.
+   * Dev login lets you sign in as any email with no credentials at all, so it
+   * defaults to off in production — a deployed instance must never be walked
+   * into. Setting ALLOW_DEV_LOGIN=true there is an explicit, deliberate opt-in.
    */
-  allowDevLogin: bool(process.env.ALLOW_DEV_LOGIN, true),
+  allowDevLogin: bool(process.env.ALLOW_DEV_LOGIN, process.env.NODE_ENV !== "production"),
 
   sessionSecret: process.env.SESSION_SECRET ?? "",
   sessionMaxAgeMs: 1000 * 60 * 60 * 24 * 30,
@@ -46,10 +47,37 @@ export const config = {
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 12 * 1024 * 1024),
 };
 
-const hasFirebaseAppletConfig = fs.existsSync(path.resolve(process.cwd(), "firebase-applet-config.json")) ||
-  fs.existsSync(path.resolve(process.cwd(), "../firebase-applet-config.json"));
+/**
+ * The Firebase web config is shipped with the app (its apiKey is a public
+ * identifier, not a secret). The server only needs `projectId` from it, to
+ * check the audience of the ID tokens the browser sends back.
+ */
+function readFirebaseProjectId(): string {
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID;
+  for (const candidate of [
+    path.resolve(process.cwd(), "firebase-applet-config.json"),
+    path.resolve(process.cwd(), "../firebase-applet-config.json"),
+  ]) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(candidate, "utf8")) as { projectId?: string };
+      if (parsed.projectId) return parsed.projectId;
+    } catch {
+      // Missing or malformed — fall through and report Firebase as unconfigured.
+    }
+  }
+  return "";
+}
 
-export const googleConfigured = Boolean((config.google.clientId && config.google.clientSecret) || hasFirebaseAppletConfig);
+export const firebaseProjectId = readFirebaseProjectId();
+
+/** Server-side OAuth code flow — needs a client id *and* secret to work. */
+export const googleOauthConfigured = Boolean(config.google.clientId && config.google.clientSecret);
+
+/** Browser-side Firebase popup sign-in — needs a project to verify tokens against. */
+export const firebaseAuthConfigured = Boolean(firebaseProjectId);
+
+/** True when any Google sign-in route can actually complete. */
+export const googleConfigured = googleOauthConfigured || firebaseAuthConfigured;
 
 
 fs.mkdirSync(config.dataDir, { recursive: true });
