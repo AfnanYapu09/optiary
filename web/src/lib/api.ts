@@ -1,6 +1,7 @@
 import type {
   CalendarDay,
   ChatMessage,
+  ChatStats,
   CompareResult,
   DayRecord,
   EntryRecord,
@@ -153,26 +154,48 @@ export type ChatStreamEvent =
   | { type: "text"; text: string }
   | { type: "tool"; name: string }
   | { type: "note-saved"; date: string; slot: SlotId }
-  | { type: "done"; text: string }
+  | { type: "shot-saved"; date: string; slot: SlotId; kind: ImageKind }
+  | { type: "metrics-saved"; date: string; slot: SlotId }
+  | { type: "data-changed"; date?: string; slot?: SlotId }
+  | { type: "settings-changed" }
+  | { type: "done"; text: string; stats: ChatStats }
   | { type: "error"; message: string }
   | { type: "end" };
+
+/** URL that serves an image the user attached to a chat turn. */
+export const chatImageUrl = (id: string) => `/api/chat-image/${id}/file`;
 
 /**
  * POSTs a chat turn and consumes the SSE reply, invoking `onEvent` per frame.
  * Rejects only on transport failures — model-side problems arrive as `error` events.
  */
 export async function streamChat(
-  body: { message: string; thread: string; slot?: SlotId },
+  body: { message: string; thread: string; slot?: SlotId; files?: File[] },
   onEvent: (event: ChatStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   const token = getStoredToken();
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  const headers: Record<string, string> = {};
   if (token) headers["authorization"] = `Bearer ${token}`;
+
+  // Attachments force multipart; without them JSON keeps the request small.
+  let payload: BodyInit;
+  if (body.files?.length) {
+    const form = new FormData();
+    form.append("message", body.message);
+    form.append("thread", body.thread);
+    if (body.slot) form.append("slot", body.slot);
+    for (const file of body.files) form.append("files", file);
+    payload = form;
+  } else {
+    headers["content-type"] = "application/json";
+    payload = JSON.stringify({ message: body.message, thread: body.thread, slot: body.slot });
+  }
+
   const res = await fetch("/api/chat", {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: payload,
     credentials: "include",
     signal,
   });

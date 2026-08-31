@@ -32,11 +32,21 @@ export function slotDef(id: SlotId): SlotDef {
 }
 
 export type Metrics = {
+  /** From the Intraday Volume chart header (Put / Call / Vol / Vol Chg / Future Chg). */
   priceClose?: number | null;
+  intradayPut?: number | null;
+  intradayCall?: number | null;
+  vol?: number | null;
+  volChg?: number | null;
+  futureChg?: number | null;
+  /** From the OI table — totals across every strike. */
   callOi?: number | null;
   putOi?: number | null;
-  oiChgTotal?: number | null;
   pcRatio?: number | null;
+  /** From the OI Chg table — net change totals for the session. */
+  callOiChg?: number | null;
+  putOiChg?: number | null;
+  oiChgTotal?: number | null;
   summary?: string | null;
   extractedAt?: string | null;
   extractedFrom?: ImageKind[];
@@ -63,11 +73,27 @@ export type EntryRecord = {
   images: Partial<Record<ImageKind, ImageRecord>>;
 };
 
+export type NewsEvent = {
+  time?: string;
+  currency?: string;
+  title: string;
+  actual?: string;
+  forecast?: string;
+  previous?: string;
+  holiday?: boolean;
+};
+
+export type DayNews = {
+  events: NewsEvent[];
+  weekSummary: string;
+};
+
 export type DayRecord = {
   date: string;
   slots: EntryRecord[];
   imageCount: number;
   imageTarget: number;
+  news: DayNews;
 };
 
 export type CalendarDay = {
@@ -75,6 +101,8 @@ export type CalendarDay = {
   imageCount: number;
   slotCounts: number[];
   complete: boolean;
+  newsCount: number;
+  holidayCount: number;
 };
 
 export type Streak = {
@@ -131,18 +159,51 @@ export type Stats = {
 
 export type LibraryItem = ImageRecord & { note: string };
 
+/** What model answered a turn, how long it took, and what it cost. */
+export type ChatStats = {
+  provider: "gemini" | "anthropic";
+  model: string;
+  ms: number;
+  inputTokens: number;
+  outputTokens: number;
+  thinkingTokens: number;
+  cachedTokens: number;
+};
+
+/** An image the user attached to a chat turn. `url` is set on optimistic local
+ * messages before the server assigns an `id`. */
+export type ChatAttachmentRef = { id?: string; url?: string; mime?: string };
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  meta: { savedNotes?: Array<{ date: string; slot: SlotId }> };
+  meta: {
+    savedNotes?: Array<{ date: string; slot: SlotId }>;
+    attachments?: ChatAttachmentRef[];
+    stats?: ChatStats | null;
+  };
   createdAt: string;
 };
 
 export type CompareResult = {
   left: EntryRecord;
   right: EntryRecord;
-  deltas: Record<"priceClose" | "callOi" | "putOi" | "oiChgTotal" | "pcRatio", number | null>;
+  deltas: Record<
+    | "priceClose"
+    | "intradayPut"
+    | "intradayCall"
+    | "vol"
+    | "volChg"
+    | "futureChg"
+    | "callOi"
+    | "putOi"
+    | "pcRatio"
+    | "callOiChg"
+    | "putOiChg"
+    | "oiChgTotal",
+    number | null
+  >;
 };
 
 /** Which sign-in routes and AI features the server can actually complete. */

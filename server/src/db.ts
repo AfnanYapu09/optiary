@@ -53,9 +53,30 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at  TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS chat_attachments (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  message_id  TEXT NOT NULL,
+  filename    TEXT NOT NULL,
+  mime        TEXT NOT NULL,
+  bytes       INTEGER NOT NULL,
+  created_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS day_news (
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date          TEXT NOT NULL,           -- YYYY-MM-DD
+  events        TEXT NOT NULL DEFAULT '[]',  -- JSON: [{time,currency,title,actual,forecast,previous,holiday}]
+  week_summary  TEXT NOT NULL DEFAULT '',
+  updated_at    TEXT NOT NULL,
+  PRIMARY KEY (user_id, date)
+);
+
 CREATE INDEX IF NOT EXISTS idx_entries_user_date ON entries (user_id, date);
 CREATE INDEX IF NOT EXISTS idx_images_user_date ON images (user_id, date);
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages (user_id, thread, created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_attachments_message ON chat_attachments (message_id);
+CREATE INDEX IF NOT EXISTS idx_day_news_user_date ON day_news (user_id, date);
 `);
 
 export function nowIso(): string {

@@ -4,6 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0f1113" />
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem("optiary_theme") || "dark";
+          var dark = m === "dark" || (m === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.setAttribute("data-theme", "dark");
+          var a = localStorage.getItem("optiary_accent");
+          if (a && a !== "gold") document.documentElement.setAttribute("data-accent", a);
+        } catch (e) {}
+      })();
+    </script>
     <title>Optiary — Option & Gold Futures (GC) Data Research Diary</title>
     <meta name="description" content="Option & Gold Futures (GC) Data Research Diary and Analysis Platform" />
     <meta property="og:title" content="Optiary — Option & Gold Futures (GC) Data Research Diary" />

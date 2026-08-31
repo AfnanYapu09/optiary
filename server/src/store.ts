@@ -5,10 +5,14 @@ import { uploadsDir } from "./config.js";
 import {
   IMAGE_KINDS,
   SLOTS,
+  SLOT_IDS,
+  type DayNews,
   type ImageKind,
   type Metrics,
+  type NewsEvent,
   type SlotId,
 } from "./domain.js";
+import { getUser } from "./auth.js";
 
 export type ImageRecord = {
   id: string;
@@ -37,6 +41,8 @@ export type DayRecord = {
   imageCount: number;
   /** 15 = five slots × three screenshots. */
   imageTarget: number;
+  /** Day-level economic news, shown under the slots regardless of which is open. */
+  news: DayNews;
 };
 
 function parseJson<T>(raw: string, fallback: T): T {
@@ -109,7 +115,51 @@ export function getDay(userId: string, date: string): DayRecord {
     slots,
     imageCount: imageRows.length,
     imageTarget: SLOTS.length * IMAGE_KINDS.length,
+    news: getDayNews(userId, date),
   };
+}
+
+export function getDayNews(userId: string, date: string): DayNews {
+  const row = db
+    .prepare("SELECT events, week_summary FROM day_news WHERE user_id = ? AND date = ?")
+    .get(userId, date) as { events: string; week_summary: string } | undefined;
+  return {
+    events: row ? parseJson<NewsEvent[]>(row.events, []) : [],
+    weekSummary: row?.week_summary ?? "",
+  };
+}
+
+/**
+ * Upserts a day's news. `events` replaces the stored list; `weekSummary`, when
+ * given, is stored on that same date (the model passes the week's anchor date).
+ */
+export function saveDayNews(
+  userId: string,
+  date: string,
+  patch: { events?: NewsEvent[]; weekSummary?: string },
+): void {
+  const current = getDayNews(userId, date);
+  const events = patch.events ?? current.events;
+  const weekSummary = patch.weekSummary ?? current.weekSummary;
+  db.prepare(
+    `INSERT INTO day_news (user_id, date, events, week_summary, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (user_id, date) DO UPDATE SET events = excluded.events, week_summary = excluded.week_summary, updated_at = excluded.updated_at`,
+  ).run(userId, date, JSON.stringify(events), weekSummary, nowIso());
+}
+
+export function deleteDayNews(userId: string, date: string): void {
+  db.prepare("DELETE FROM day_news WHERE user_id = ? AND date = ?").run(userId, date);
+}
+
+/** Dates in `month` (YYYY-MM) that carry at least one news event. */
+export function newsDatesInMonth(userId: string, month: string): string[] {
+  const rows = db
+    .prepare(
+      "SELECT date FROM day_news WHERE user_id = ? AND date LIKE ? AND events != '[]'",
+    )
+    .all(userId, `${month}-%`) as Array<{ date: string }>;
+  return rows.map((r) => r.date);
 }
 
 function ensureEntry(userId: string, date: string, slot: SlotId): void {
@@ -144,6 +194,17 @@ export function appendNote(userId: string, date: string, slot: SlotId, text: str
   const note = current.note ? `${current.note.trimEnd()}\n${text}` : text;
   const tags = tag && !current.tags.includes(tag) ? [...current.tags, tag] : current.tags;
   return saveEntry(userId, date, slot, { note, tags });
+}
+
+/**
+ * Appends to a whole-day note (economic-news lines, holidays) — there is no
+ * per-day note row, so it lands on the first enabled slot of that day.
+ */
+export function appendDayNote(userId: string, date: string, text: string, tag?: string): SlotId {
+  const settings = getUser(userId)?.settings;
+  const slot = SLOT_IDS.find((id) => settings?.slots?.[id]?.enabled) ?? SLOT_IDS[0];
+  appendNote(userId, date, slot, text, tag);
+  return slot;
 }
 
 export function storeImage(
@@ -210,6 +271,49 @@ export function getImageFile(
   return { absolutePath, mime: row.mime };
 }
 
+/**
+ * Persists an image the user dropped into the chat so the transcript can show it
+ * later. This is separate from `storeImage` (the dated library): a chat image is
+ * tied to a message, not to a slot, and the model may or may not also file it.
+ */
+export function storeChatAttachment(
+  userId: string,
+  messageId: string,
+  file: { buffer: Buffer; mime: string; originalname: string },
+): { id: string; mime: string } {
+  const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".png";
+  const id = uid();
+  const filename = `chat_${userId}_${id}${ext}`;
+  fs.writeFileSync(path.join(uploadsDir, filename), file.buffer);
+  db.prepare(
+    "INSERT INTO chat_attachments (id, user_id, message_id, filename, mime, bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  ).run(id, userId, messageId, filename, file.mime, file.buffer.byteLength, nowIso());
+  return { id, mime: file.mime };
+}
+
+export function getChatAttachmentFile(
+  userId: string,
+  attachmentId: string,
+): { absolutePath: string; mime: string } | null {
+  const row = db
+    .prepare("SELECT filename, mime FROM chat_attachments WHERE id = ? AND user_id = ?")
+    .get(attachmentId, userId) as { filename: string; mime: string } | undefined;
+  if (!row) return null;
+  const absolutePath = path.resolve(uploadsDir, row.filename);
+  if (!absolutePath.startsWith(path.resolve(uploadsDir) + path.sep)) return null;
+  if (!fs.existsSync(absolutePath)) return null;
+  return { absolutePath, mime: row.mime };
+}
+
+export function deleteChatAttachment(userId: string, attachmentId: string): void {
+  const row = db
+    .prepare("SELECT filename FROM chat_attachments WHERE id = ? AND user_id = ?")
+    .get(attachmentId, userId) as { filename: string } | undefined;
+  if (!row) return;
+  removeImageFile(row.filename);
+  db.prepare("DELETE FROM chat_attachments WHERE id = ? AND user_id = ?").run(attachmentId, userId);
+}
+
 export function readImageBase64(
   userId: string,
   date: string,
@@ -237,12 +341,139 @@ export function deleteImage(userId: string, imageId: string): boolean {
   return true;
 }
 
+/** Deletes one screenshot addressed the way the research diary thinks of it. */
+export function deleteImageAt(
+  userId: string,
+  date: string,
+  slot: SlotId,
+  kind: ImageKind,
+): boolean {
+  const row = db
+    .prepare(
+      "SELECT id FROM images WHERE user_id = ? AND date = ? AND slot = ? AND kind = ?",
+    )
+    .get(userId, date, slot, kind) as { id: string } | undefined;
+  return row ? deleteImage(userId, row.id) : false;
+}
+
+function removeImagesWhere(userId: string, clause: string, params: string[]): number {
+  const rows = db
+    .prepare(`SELECT id, filename FROM images WHERE user_id = ? AND ${clause}`)
+    .all(userId, ...params) as Array<{ id: string; filename: string }>;
+  for (const r of rows) removeImageFile(r.filename);
+  db.prepare(`DELETE FROM images WHERE user_id = ? AND ${clause}`).run(userId, ...params);
+  return rows.length;
+}
+
+/** What one slot currently holds — used to preview a delete before doing it. */
+export function slotFootprint(
+  userId: string,
+  date: string,
+  slot: SlotId,
+): { hasNote: boolean; tags: number; hasMetrics: boolean; images: number } {
+  const s = getDay(userId, date).slots.find((x) => x.slot === slot)!;
+  return {
+    hasNote: Boolean(s.note),
+    tags: s.tags.length,
+    hasMetrics: Object.keys(s.metrics).length > 0,
+    images: Object.keys(s.images).length,
+  };
+}
+
+/** Clears a slot's note, tags and metrics; also its screenshots when asked. */
+export function clearSlot(
+  userId: string,
+  date: string,
+  slot: SlotId,
+  opts: { images?: boolean } = {},
+): { images: number } {
+  ensureEntry(userId, date, slot);
+  db.prepare(
+    "UPDATE entries SET note = '', tags = '[]', metrics = '{}', updated_at = ? WHERE user_id = ? AND date = ? AND slot = ?",
+  ).run(nowIso(), userId, date, slot);
+  const images = opts.images
+    ? removeImagesWhere(userId, "date = ? AND slot = ?", [date, slot])
+    : 0;
+  return { images };
+}
+
+export function dayFootprint(
+  userId: string,
+  date: string,
+): { slotsWithData: number; images: number; newsEvents: number } {
+  const day = getDay(userId, date);
+  return {
+    slotsWithData: day.slots.filter(
+      (s) => s.note || s.tags.length || Object.keys(s.metrics).length > 0,
+    ).length,
+    images: day.imageCount,
+    newsEvents: day.news.events.length,
+  };
+}
+
+/** Deletes every entry, screenshot and news item for one date. */
+export function deleteDay(userId: string, date: string): { entries: number; images: number } {
+  const images = removeImagesWhere(userId, "date = ?", [date]);
+  const entries = Number(
+    db.prepare("DELETE FROM entries WHERE user_id = ? AND date = ?").run(userId, date).changes,
+  );
+  deleteDayNews(userId, date);
+  return { entries, images };
+}
+
+/** Every date the user has an entry or a screenshot on, newest first. */
+export function listDataDates(userId: string): string[] {
+  const rows = db
+    .prepare(
+      `SELECT date FROM entries WHERE user_id = ?
+       UNION SELECT date FROM images WHERE user_id = ?
+       ORDER BY date DESC`,
+    )
+    .all(userId, userId) as Array<{ date: string }>;
+  return rows.map((r) => r.date);
+}
+
+/** Totals across the whole account — the preview for a full wipe. */
+export function dataFootprint(userId: string): {
+  days: number;
+  entries: number;
+  notes: number;
+  images: number;
+  newsDays: number;
+  messages: number;
+} {
+  const one = (sql: string) => (db.prepare(sql).get(userId) as { n: number }).n;
+  return {
+    days: listDataDates(userId).length,
+    entries: one("SELECT COUNT(*) n FROM entries WHERE user_id = ?"),
+    notes: one("SELECT COUNT(*) n FROM entries WHERE user_id = ? AND note != ''"),
+    images: one("SELECT COUNT(*) n FROM images WHERE user_id = ?"),
+    newsDays: one("SELECT COUNT(*) n FROM day_news WHERE user_id = ? AND events != '[]'"),
+    messages: one("SELECT COUNT(*) n FROM messages WHERE user_id = ?"),
+  };
+}
+
+/** Wipes all research data for the user. Chat transcript is left intact. */
+export function deleteAllData(userId: string): {
+  entries: number;
+  images: number;
+} {
+  const images = removeImagesWhere(userId, "1 = 1", []);
+  const entries = Number(db.prepare("DELETE FROM entries WHERE user_id = ?").run(userId).changes);
+  db.prepare("DELETE FROM day_news WHERE user_id = ?").run(userId);
+  return { entries, images };
+}
+
 export type CalendarDay = {
   date: string;
   imageCount: number;
   /** One entry per slot: how many of the three screenshots exist. */
   slotCounts: number[];
   complete: boolean;
+  /** High-impact (red-folder) news releases on this day. */
+  newsCount: number;
+  /** Holidays / all-day items on this day (shown neutrally, not as red news). */
+  holidayCount: number;
 };
 
 export function getCalendar(userId: string, month: string): CalendarDay[] {
@@ -261,10 +492,30 @@ export function getCalendar(userId: string, month: string): CalendarDay[] {
     byDate.set(row.date, counts);
   }
 
+  const newsRows = db
+    .prepare("SELECT date, events FROM day_news WHERE user_id = ? AND date LIKE ?")
+    .all(userId, `${month}-%`) as Array<{ date: string; events: string }>;
+  const newsByDate = new Map<string, { news: number; holiday: number }>();
+  for (const row of newsRows) {
+    const events = parseJson<NewsEvent[]>(row.events, []);
+    if (!events.length) continue;
+    const holiday = events.filter((e) => e.holiday).length;
+    newsByDate.set(row.date, { news: events.length - holiday, holiday });
+    if (!byDate.has(row.date)) byDate.set(row.date, SLOTS.map(() => 0));
+  }
+
   return [...byDate.entries()]
     .map(([date, slotCounts]) => {
       const imageCount = slotCounts.reduce((a, b) => a + b, 0);
-      return { date, slotCounts, imageCount, complete: slotCounts.every((n) => n >= 3) };
+      const n = newsByDate.get(date);
+      return {
+        date,
+        slotCounts,
+        imageCount,
+        complete: slotCounts.every((n) => n >= 3),
+        newsCount: n?.news ?? 0,
+        holidayCount: n?.holiday ?? 0,
+      };
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 }

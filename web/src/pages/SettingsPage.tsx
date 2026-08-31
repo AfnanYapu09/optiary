@@ -5,13 +5,29 @@ import { useToast } from "../lib/toast.tsx";
 import { clockNow } from "../lib/format.ts";
 import { saveUserProfileToCloud } from "../lib/firebase.ts";
 import { SLOTS, type SlotId, type UserSettings } from "../lib/types.ts";
+import {
+  ACCENTS,
+  getAccent,
+  getThemeMode,
+  setAccent,
+  setThemeMode,
+  type Accent,
+  type ThemeMode,
+} from "../lib/theme.ts";
 import "../styles/settings.css";
 
 const SECTIONS = [
   { id: "profile", label: "โปรไฟล์" },
+  { id: "appearance", label: "หน้าตา" },
   { id: "slots", label: "ช่วงเวลาบันทึก" },
   { id: "ai", label: "ผู้ช่วย AI" },
   { id: "data", label: "ข้อมูลและการส่งออก" },
+];
+
+const THEME_OPTIONS: Array<{ id: ThemeMode; label: string }> = [
+  { id: "light", label: "สว่าง" },
+  { id: "dark", label: "มืด" },
+  { id: "system", label: "ตามระบบ" },
 ];
 
 const PREFS: Array<{ key: keyof UserSettings; name: string; desc: string }> = [
@@ -44,6 +60,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [section, setSection] = useState("profile");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(getThemeMode());
+  const [accent, setAccentState] = useState<Accent>(getAccent());
 
   useEffect(() => {
     if (user?.settings) setDraft(user.settings);
@@ -131,6 +149,54 @@ export default function SettingsPage() {
             <button className="btn" onClick={() => void signOut()}>
               ออกจากระบบ
             </button>
+          </section>
+
+          <section id="sec-appearance" className="settings-section">
+            <span className="eyebrow">หน้าตา</span>
+            <div className="settings-rows">
+              <div className="pref-row">
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <span>ธีม</span>
+                  <small>มืดเป็นค่าเริ่มต้น เลือกสว่างหรือตามระบบได้</small>
+                </div>
+                <div className="seg">
+                  {THEME_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      aria-pressed={themeMode === opt.id}
+                      onClick={() => {
+                        setThemeMode(opt.id);
+                        setThemeModeState(opt.id);
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="pref-row">
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <span>โทนสี</span>
+                  <small>สีเน้นของปุ่ม ลิงก์ และไฮไลต์</small>
+                </div>
+                <div className="accent-picker">
+                  {ACCENTS.map((a) => (
+                    <button
+                      key={a.id}
+                      className={`accent-dot${accent === a.id ? " active" : ""}`}
+                      style={{ background: a.swatch }}
+                      aria-label={a.label}
+                      aria-pressed={accent === a.id}
+                      title={a.label}
+                      onClick={() => {
+                        setAccent(a.id);
+                        setAccentState(a.id);
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           </section>
 
           <section id="sec-slots" className="settings-section">

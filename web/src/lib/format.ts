@@ -105,11 +105,11 @@ export function signed(value: number | null | undefined, digits = 0): string {
   return body;
 }
 
-/** Grid of 42 cells (6 weeks), Monday-first, `null` where the month hasn't started. */
+/** Grid of 42 cells (6 weeks), Sunday-first, `null` where the month hasn't started. */
 export function monthGrid(month: string): Array<string | null> {
   const [y, m] = month.split("-").map(Number);
   const first = new Date(Date.UTC(y, m - 1, 1));
-  const lead = (first.getUTCDay() + 6) % 7; // shift Sunday-first to Monday-first
+  const lead = first.getUTCDay(); // 0 = Sunday, the first column
   const length = new Date(Date.UTC(y, m, 0)).getUTCDate();
   const cells: Array<string | null> = Array.from({ length: lead }, () => null);
   for (let d = 1; d <= length; d += 1) {
@@ -125,4 +125,4 @@ export function isWeekend(date: string): boolean {
   return dow === 0 || dow === 6;
 }
 
-export const DOW_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+export const DOW_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];

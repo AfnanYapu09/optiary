@@ -47,15 +47,43 @@ export function isDateString(v: string): boolean {
 }
 
 export type Metrics = {
+  /** From the Intraday Volume chart header (Put / Call / Vol / Vol Chg / Future Chg). */
   priceClose?: number | null;
+  intradayPut?: number | null;
+  intradayCall?: number | null;
+  vol?: number | null;
+  volChg?: number | null;
+  futureChg?: number | null;
+  /** From the OI table — totals across every strike. */
   callOi?: number | null;
   putOi?: number | null;
-  oiChgTotal?: number | null;
   pcRatio?: number | null;
+  /** From the OI Chg table — net change totals for the session. */
+  callOiChg?: number | null;
+  putOiChg?: number | null;
+  oiChgTotal?: number | null;
   /** Free-form observations the model pulled off the chart. */
   summary?: string | null;
   extractedAt?: string | null;
   extractedFrom?: ImageKind[];
+};
+
+/** One high-impact (red-folder) economic event, or a holiday, for a day. */
+export type NewsEvent = {
+  time?: string;
+  currency?: string;
+  title: string;
+  actual?: string;
+  forecast?: string;
+  previous?: string;
+  /** true for holidays / all-day items rather than a scheduled release. */
+  holiday?: boolean;
+};
+
+export type DayNews = {
+  events: NewsEvent[];
+  /** "Strongest news of the week" note, stored on the week's anchor date. */
+  weekSummary: string;
 };
 
 export type UserSettings = {

@@ -88,7 +88,21 @@ insightRoutes.get("/compare", (req, res) => {
   const a = pick(left);
   const b = pick(right);
 
-  const delta = (key: "priceClose" | "callOi" | "putOi" | "oiChgTotal" | "pcRatio") => {
+  const delta = (
+    key:
+      | "priceClose"
+      | "intradayPut"
+      | "intradayCall"
+      | "vol"
+      | "volChg"
+      | "futureChg"
+      | "callOi"
+      | "putOi"
+      | "pcRatio"
+      | "callOiChg"
+      | "putOiChg"
+      | "oiChgTotal",
+  ) => {
     const av = a.metrics[key];
     const bv = b.metrics[key];
     if (typeof av !== "number" || typeof bv !== "number") return null;
@@ -100,10 +114,17 @@ insightRoutes.get("/compare", (req, res) => {
     right: b,
     deltas: {
       priceClose: delta("priceClose"),
+      intradayPut: delta("intradayPut"),
+      intradayCall: delta("intradayCall"),
+      vol: delta("vol"),
+      volChg: delta("volChg"),
+      futureChg: delta("futureChg"),
       callOi: delta("callOi"),
       putOi: delta("putOi"),
-      oiChgTotal: delta("oiChgTotal"),
       pcRatio: delta("pcRatio"),
+      callOiChg: delta("callOiChg"),
+      putOiChg: delta("putOiChg"),
+      oiChgTotal: delta("oiChgTotal"),
     },
   });
 });

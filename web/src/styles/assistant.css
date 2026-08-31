@@ -29,8 +29,8 @@
   max-width: 90%;
   padding: 13px 14px;
   border-radius: 12px 12px 12px 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--fill-2);
+  border: 1px solid var(--line-2);
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -47,20 +47,20 @@
   align-self: flex-end;
   max-width: 82%;
   border-radius: 12px 12px 4px 12px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--line-2);
   border-color: transparent;
   padding: 12px 14px;
 }
 .bubble.user p {
-  color: rgba(237, 234, 228, 0.85);
+  color: var(--t-80);
   line-height: 1.75;
 }
 .bubble.ai {
-  background: linear-gradient(160deg, rgba(217, 178, 106, 0.12), rgba(217, 178, 106, 0.03));
-  border-color: rgba(217, 178, 106, 0.2);
+  background: var(--gold-fill);
+  border-color: var(--gold-fill-2);
 }
 .bubble.ai p {
-  color: rgba(237, 234, 228, 0.85);
+  color: var(--t-80);
 }
 
 .bubble-actions {
@@ -88,7 +88,7 @@
   cursor: not-allowed;
 }
 .chip.gold {
-  background: rgba(217, 178, 106, 0.16);
+  background: var(--gold-fill-2);
   border-color: transparent;
   color: var(--gold);
   cursor: default;
@@ -102,6 +102,94 @@
   font: 300 12px/1 var(--thai);
   color: var(--t-45);
   padding-left: 2px;
+}
+.assistant-timer {
+  font: 400 10.5px/1 var(--mono);
+  color: var(--t-30);
+}
+
+/* Thumbnails of the screenshots a user attached to a turn. */
+.bubble-shots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.bubble-shot {
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  overflow: hidden;
+  cursor: zoom-in;
+  background: none;
+  line-height: 0;
+}
+.bubble-shot img {
+  width: 92px;
+  height: 68px;
+  object-fit: cover;
+  display: block;
+}
+
+/* Model / duration / token line under an assistant reply. */
+.assistant-stats {
+  margin-top: 8px;
+  font: 400 10px/1.5 var(--mono);
+  color: var(--t-30);
+  word-break: break-word;
+}
+
+.assistant-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.82);
+  cursor: zoom-out;
+}
+.assistant-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  cursor: default;
+}
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line-3);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 400 22px/1 var(--mono);
+  cursor: pointer;
+}
+.lightbox-nav:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+.lightbox-nav.prev {
+  left: 16px;
+}
+.lightbox-nav.next {
+  right: 16px;
+}
+.lightbox-count {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
 }
 
 .assistant-compose {
@@ -159,6 +247,63 @@
   flex: none;
 }
 .assistant-input button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The attach control sits beside the send button but must not compete with it. */
+.assistant-input button.assistant-attach {
+  background: none;
+  border: 1px solid var(--line-2);
+  color: var(--t-40);
+  font-size: 13px;
+}
+
+.assistant-attachments {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assistant-thumb {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  background: var(--fill-2);
+}
+.assistant-thumb-view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  line-height: 0;
+}
+.assistant-thumb-view img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.assistant-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font: 400 11px/1 var(--mono);
+  cursor: pointer;
+}
+.assistant-thumb-remove:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
