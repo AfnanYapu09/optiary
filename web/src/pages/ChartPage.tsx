@@ -33,28 +33,37 @@ export default function ChartPage() {
     if (!stats) return [];
     return [
       {
+        k: "P/C RATIO",
+        v: num(stats.latestPcRatio, 2),
+        sub:
+          stats.latestPcRatio == null
+            ? "ยังไม่มีค่า"
+            : stats.latestPcRatio < 1
+              ? "Call มากกว่า Put"
+              : "Put มากกว่า Call",
+        color: (stats.latestPcRatio ?? 1) < 1 ? "var(--call)" : "var(--put)",
+        tone: undefined as string | undefined,
+      },
+      {
+        k: "AVG OI CHG",
+        v: signed(stats.avgOiChg, 0),
+        sub: bestSlotLabel(stats),
+        color: "var(--t-45)",
+        tone: (stats.avgOiChg ?? 0) >= 0 ? "var(--up)" : "var(--down)",
+      },
+      {
         k: "IMAGES CAPTURED",
         v: num(stats.streak.totalImages),
         sub: `${stats.streak.totalDays} วันที่บันทึก`,
-        color: "var(--green)",
+        color: "var(--t-45)",
+        tone: undefined,
       },
       {
         k: "COMPLETE DAYS",
         v: `${stats.streak.completeDays} / ${stats.streak.totalDays}`,
         sub: "ครบทั้ง 5 ช่วง",
         color: "var(--t-45)",
-      },
-      {
-        k: "AVG OI CHG",
-        v: signed(stats.avgOiChg, 0),
-        sub: bestSlotLabel(stats),
-        color: "var(--gold)",
-      },
-      {
-        k: "P/C RATIO",
-        v: num(stats.latestPcRatio, 2),
-        sub: "ค่าล่าสุดที่ถอดได้",
-        color: (stats.latestPcRatio ?? 1) < 1 ? "var(--green)" : "var(--red)",
+        tone: undefined,
       },
     ];
   }, [stats]);
@@ -91,9 +100,9 @@ export default function ChartPage() {
 
   return (
     <div className="chart-page">
-      <header className="chart-bar">
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <span style={{ font: "400 16px/1 var(--thai)", color: "var(--ink)" }}>กราฟสรุป</span>
+      <header className="toolbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <h1>กราฟสรุป</h1>
           <div className="seg">
             {RANGES.map((range) => (
               <button key={range.days} aria-pressed={days === range.days} onClick={() => setDays(range.days)}>
@@ -102,13 +111,13 @@ export default function ChartPage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <span className="legend">
             <i style={{ background: "var(--gold)" }} />
             ราคา Intraday
           </span>
           <span className="legend">
-            <i style={{ background: "var(--blue)", height: 0, borderTop: "2px dashed var(--blue)" }} />
+            <i style={{ background: "var(--call)", height: 0, borderTop: "2px dashed var(--call)" }} />
             Open Interest
           </span>
           <a className="btn" href="/api/export.csv">
@@ -121,10 +130,10 @@ export default function ChartPage() {
         <div className="kpi-row">
           {kpis.map((kpi) => (
             <div key={kpi.k} className="kpi">
-              <span className="eyebrow" style={{ letterSpacing: "0.12em" }}>
-                {kpi.k}
-              </span>
-              <b className="mono">{kpi.v}</b>
+              <span className="eyebrow caps">{kpi.k}</span>
+              <b className="mono" style={kpi.tone ? { color: kpi.tone } : undefined}>
+                {kpi.v}
+              </b>
               <small style={{ color: kpi.color }}>{kpi.sub}</small>
             </div>
           ))}

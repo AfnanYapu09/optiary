@@ -5,7 +5,7 @@
 
 .login-hero {
   flex: 1.25;
-  background: radial-gradient(120% 90% at 12% 8%, rgba(217, 178, 106, 0.1), transparent 60%), var(--bg);
+  background: radial-gradient(120% 90% at 12% 8%, var(--glow), transparent 62%), var(--bg);
   padding: 64px 72px;
   display: flex;
   flex-direction: column;
@@ -132,12 +132,12 @@
 
 .login-error {
   margin: 0;
-  padding: 11px 14px;
-  border-radius: 9px;
-  border: 1px solid var(--gold-line);
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--down);
   background: var(--fill-2);
   font: 300 12.5px/1.6 var(--thai);
-  color: var(--red);
+  color: var(--down);
 }
 
 .login-hint {

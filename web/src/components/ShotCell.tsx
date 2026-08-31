@@ -9,6 +9,8 @@ type Props = {
   busy?: boolean;
   onUpload: (file: File) => void;
   onRemove?: () => void;
+  /** Opens the full-size viewer. Without it, clicking the shot replaces it. */
+  onView?: () => void;
   /** Adds a document-level paste handler so ⌘V drops straight into this cell. */
   pasteTarget?: boolean;
 };
@@ -36,6 +38,7 @@ export default function ShotCell({
   busy,
   onUpload,
   onRemove,
+  onView,
   pasteTarget,
 }: Props) {
   const input = useRef<HTMLInputElement>(null);
@@ -58,28 +61,24 @@ export default function ShotCell({
     <div className="shot-cell" style={{ ["--shot-h" as string]: `${height}px` }}>
       <div className="shot-cell-head">
         <span>{KIND_LABELS[kind]}</span>
+        {/* No "uploaded" badge: the thumbnail below already says the image is
+         * there. The actions stay neutral until pointed at, so three of these
+         * side by side don't turn the row into a colour chart. */}
         {busy ? (
-          <span className="mono" style={{ fontSize: 9.5, color: "var(--gold)" }}>
-            UPLOADING…
-          </span>
+          <span className="shot-badge busy">กำลังอัปโหลด…</span>
         ) : image ? (
           <span className="shot-cell-actions">
-            <span className="mono" style={{ fontSize: 9.5, color: "var(--green)" }}>
-              UPLOADED
-            </span>
-            <button className="linkish" onClick={() => input.current?.click()}>
+            <button className="ghost" onClick={() => input.current?.click()}>
               เปลี่ยน
             </button>
             {onRemove ? (
-              <button className="linkish danger" onClick={onRemove}>
+              <button className="ghost danger" onClick={onRemove}>
                 ลบ
               </button>
             ) : null}
           </span>
         ) : (
-          <span className="mono" style={{ fontSize: 9.5, color: "var(--gold)" }}>
-            รอภาพ
-          </span>
+          <span className="shot-badge">รอภาพ</span>
         )}
       </div>
 
@@ -99,8 +98,10 @@ export default function ShotCell({
         <button
           className="shot"
           style={{ height: "var(--shot-h)" }}
-          onClick={() => input.current?.click()}
-          title="คลิกเพื่อเปลี่ยนภาพ"
+          // Clicking the shot opens it; replacing it is the "เปลี่ยน" action in
+          // the header, which is what a click here used to do by surprise.
+          onClick={() => (onView ? onView() : input.current?.click())}
+          title={onView ? "คลิกเพื่อดูภาพเต็ม" : "คลิกเพื่อเปลี่ยนภาพ"}
         >
           <img src={image.url} alt={`${KIND_LABELS[kind]} ${image.date}`} loading="lazy" decoding="async" />
           {caption ? <span className="tag">{caption}</span> : null}

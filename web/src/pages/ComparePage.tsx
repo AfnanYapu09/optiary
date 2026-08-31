@@ -163,19 +163,19 @@ export default function ComparePage() {
     [library],
   );
 
-  // Default the two sides to the newest two captures of the selected kind.
+  // Default the two sides to the newest two captures of the selected kind. With
+  // only one capture the left side stays empty rather than duplicating the
+  // right — comparing a shot against itself produced a full screen of "→ ต่าง 0".
   useEffect(() => {
     if (captures.length === 0) {
       setLeft(null);
       setRight(null);
       return;
     }
-    setRight((current) => (current && captures.some((c) => pickKey(c) === pickKey(current)) ? current : captures[0]));
-    setLeft((current) =>
-      current && captures.some((c) => pickKey(c) === pickKey(current))
-        ? current
-        : captures[Math.min(1, captures.length - 1)],
-    );
+    const known = (pick: Pick | null) =>
+      pick !== null && captures.some((c) => pickKey(c) === pickKey(pick));
+    setRight((current) => (known(current) ? current : captures[0]));
+    setLeft((current) => (known(current) ? current : captures[1] ?? null));
   }, [captures]);
 
   useEffect(() => {
@@ -220,33 +220,42 @@ export default function ComparePage() {
   const setMode = (next: Mode) => setParams({ mode: next, kind }, { replace: true });
   const setKind = (next: ImageKind) => setParams({ mode, kind: next }, { replace: true });
 
-  const deltaStats = (() => {
-    if (!diff) return [] as Array<{ k: string; v: string; sub: string; color: string }>;
+  const samePick = Boolean(left && right && pickKey(left) === pickKey(right));
+
+  /**
+   * A comparison is about what moved, so this is a table (metric, both sides,
+   * delta) rather than a wall of cards — and rows that did not move are dimmed
+   * so the eye lands on the ones that did.
+   */
+  const diffRows = (() => {
+    if (!diff) return [];
     const L = diff.left.metrics;
     const R = diff.right.metrics;
-    const chg = (d: number | null | undefined) => ((d ?? 0) >= 0 ? "var(--green)" : "var(--red)");
+    const d = diff.deltas;
     const rows = [
-      { k: "ราคาปิดช่วง", v: `${num(L.priceClose, 1)} → ${num(R.priceClose, 1)}`, sub: signed(diff.deltas.priceClose, 1), color: "var(--ink)", core: true, has: L.priceClose != null || R.priceClose != null },
-      { k: "INTRADAY PUT", v: `${num(L.intradayPut)} → ${num(R.intradayPut)}`, sub: signed(diff.deltas.intradayPut), color: chg(diff.deltas.intradayPut), core: false, has: L.intradayPut != null || R.intradayPut != null },
-      { k: "INTRADAY CALL", v: `${num(L.intradayCall)} → ${num(R.intradayCall)}`, sub: signed(diff.deltas.intradayCall), color: chg(diff.deltas.intradayCall), core: false, has: L.intradayCall != null || R.intradayCall != null },
-      { k: "VOL", v: `${num(L.vol, 2)} → ${num(R.vol, 2)}`, sub: signed(diff.deltas.vol, 2), color: "var(--ink)", core: false, has: L.vol != null || R.vol != null },
-      { k: "VOL CHG", v: `${signed(L.volChg, 2)} → ${signed(R.volChg, 2)}`, sub: signed(diff.deltas.volChg, 2), color: chg(diff.deltas.volChg), core: false, has: L.volChg != null || R.volChg != null },
-      { k: "FUTURE CHG", v: `${signed(L.futureChg, 1)} → ${signed(R.futureChg, 1)}`, sub: signed(diff.deltas.futureChg, 1), color: chg(diff.deltas.futureChg), core: false, has: L.futureChg != null || R.futureChg != null },
-      { k: "CALL OI", v: `${num(L.callOi)} → ${num(R.callOi)}`, sub: signed(diff.deltas.callOi), color: chg(diff.deltas.callOi), core: true, has: L.callOi != null || R.callOi != null },
-      { k: "PUT OI", v: `${num(L.putOi)} → ${num(R.putOi)}`, sub: signed(diff.deltas.putOi), color: chg(diff.deltas.putOi), core: true, has: L.putOi != null || R.putOi != null },
-      { k: "P/C RATIO", v: `${num(L.pcRatio, 2)} → ${num(R.pcRatio, 2)}`, sub: signed(diff.deltas.pcRatio, 2), color: "var(--gold)", core: true, has: L.pcRatio != null || R.pcRatio != null },
-      { k: "CALL OI CHG", v: `${signed(L.callOiChg)} → ${signed(R.callOiChg)}`, sub: signed(diff.deltas.callOiChg), color: chg(diff.deltas.callOiChg), core: false, has: L.callOiChg != null || R.callOiChg != null },
-      { k: "PUT OI CHG", v: `${signed(L.putOiChg)} → ${signed(R.putOiChg)}`, sub: signed(diff.deltas.putOiChg), color: chg(diff.deltas.putOiChg), core: false, has: L.putOiChg != null || R.putOiChg != null },
-      { k: "OI CHG รวม", v: `${signed(L.oiChgTotal)} → ${signed(R.oiChgTotal)}`, sub: signed(diff.deltas.oiChgTotal), color: chg(diff.deltas.oiChgTotal), core: false, has: L.oiChgTotal != null || R.oiChgTotal != null },
+      { k: "P/C Ratio", l: num(L.pcRatio, 2), r: num(R.pcRatio, 2), delta: d.pcRatio, digits: 2, core: true },
+      { k: "Put OI", l: num(L.putOi), r: num(R.putOi), delta: d.putOi, digits: 0, core: true },
+      { k: "Call OI", l: num(L.callOi), r: num(R.callOi), delta: d.callOi, digits: 0, core: true },
+      { k: "ราคาปัจจุบัน", l: num(L.priceClose, 1), r: num(R.priceClose, 1), delta: d.priceClose, digits: 1, core: true },
+      { k: "OI เปลี่ยนแปลงรวม", l: signed(L.oiChgTotal), r: signed(R.oiChgTotal), delta: d.oiChgTotal, digits: 0, core: true },
+      { k: "Put OI Chg", l: signed(L.putOiChg), r: signed(R.putOiChg), delta: d.putOiChg, digits: 0, core: false },
+      { k: "Call OI Chg", l: signed(L.callOiChg), r: signed(R.callOiChg), delta: d.callOiChg, digits: 0, core: false },
+      { k: "Intraday Put", l: num(L.intradayPut), r: num(R.intradayPut), delta: d.intradayPut, digits: 0, core: false },
+      { k: "Intraday Call", l: num(L.intradayCall), r: num(R.intradayCall), delta: d.intradayCall, digits: 0, core: false },
+      { k: "Vol", l: num(L.vol, 2), r: num(R.vol, 2), delta: d.vol, digits: 2, core: false },
+      { k: "Vol Chg", l: signed(L.volChg, 2), r: signed(R.volChg, 2), delta: d.volChg, digits: 2, core: false },
+      { k: "Future Chg", l: signed(L.futureChg, 1), r: signed(R.futureChg, 1), delta: d.futureChg, digits: 1, core: false },
     ];
-    return rows.filter((r) => r.core || r.has).map(({ core, has, ...r }) => r);
+    return rows.filter((row) => row.core || row.l !== "—" || row.r !== "—");
   })();
+
+  const movedCount = diffRows.filter((row) => (row.delta ?? 0) !== 0).length;
 
   return (
     <div className="compare">
-      <header className="compare-bar">
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <span style={{ font: "400 16px/1 var(--thai)", color: "var(--ink)" }}>เปรียบเทียบรูปภาพ</span>
+      <header className="toolbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <h1>เทียบภาพ</h1>
           <div className="seg">
             {MODES.map((item) => (
               <button key={item.id} aria-pressed={mode === item.id} onClick={() => setMode(item.id)}>
@@ -300,10 +309,10 @@ export default function ComparePage() {
                       </em>
                     </div>
                     <div className="library-actions">
-                      <button className="linkish" onClick={() => setLeft(pick)}>
+                      <button className="ghost" onClick={() => setLeft(pick)}>
                         ซ้าย
                       </button>
-                      <button className="linkish" onClick={() => setRight(pick)}>
+                      <button className="ghost" onClick={() => setRight(pick)}>
                         ขวา
                       </button>
                     </div>
@@ -318,22 +327,24 @@ export default function ComparePage() {
           {mode === "pair" ? (
             <>
               <div className="pair-head">
-                <span className="pair-chip">
-                  {left ? `${shortThaiDate(left.date)} · ${slotDef(left.slot).th}` : "เลือกภาพซ้าย"}
+                <span className={`pair-chip${left ? "" : " ghosted"}`}>
+                  {left ? `${shortThaiDate(left.date)} · ${slotDef(left.slot).th}` : "ยังไม่ได้เลือกภาพซ้าย"}
                 </span>
-                <span className="mono" style={{ fontSize: 11, color: "var(--t-30)" }}>
+                <span className="mono" style={{ fontSize: 10.5, color: "var(--t-30)" }}>
                   VS
                 </span>
-                <span className="pair-chip">
-                  {right ? `${shortThaiDate(right.date)} · ${slotDef(right.slot).th}` : "เลือกภาพขวา"}
+                <span className={`pair-chip${right ? "" : " ghosted"}`}>
+                  {right ? `${shortThaiDate(right.date)} · ${slotDef(right.slot).th}` : "ยังไม่ได้เลือกภาพขวา"}
                 </span>
                 <div style={{ flex: 1 }} />
-                <span className="mono" style={{ fontSize: 10.5, color: "var(--t-40)" }}>
-                  ลากเส้นกลางเพื่อไล่ดูภาพ
-                </span>
+                {left && right && !samePick ? (
+                  <span style={{ font: "300 11px/1.3 var(--thai)", color: "var(--t-35)" }}>
+                    ลากเส้นกลางเพื่อไล่ดูภาพ
+                  </span>
+                ) : null}
               </div>
 
-              {left && right ? (
+              {left && right && !samePick ? (
                 <SplitView
                   kind={kind}
                   left={left}
@@ -341,31 +352,69 @@ export default function ComparePage() {
                   leftUrl={urlFor(left)}
                   rightUrl={urlFor(right)}
                 />
+              ) : right ? (
+                // One capture only. Show it plainly instead of splitting it
+                // against itself, which produced a screen of zero deltas.
+                <div className="solo card">
+                  <img src={urlFor(right)} alt={KIND_LABELS[kind]} />
+                  <p>
+                    มีภาพ {KIND_LABELS[kind]} อยู่ช่วงเดียว — เลือกอีกช่วงจากคลังด้านซ้าย (ปุ่ม “ซ้าย”)
+                    หรือบันทึกเพิ่มอีกวัน แล้วหน้านี้จะเทียบให้
+                  </p>
+                </div>
               ) : (
                 <div className="card empty" style={{ flex: 1 }}>
                   เลือกภาพสองภาพจากคลังด้านซ้ายเพื่อเริ่มเปรียบเทียบ
                 </div>
               )}
 
-              {deltaStats.length ? (
-                <div className="pair-stats">
-                  {deltaStats.map((stat) => (
-                    <div key={stat.k} className="stat">
-                      <span className="eyebrow" style={{ letterSpacing: "0.1em" }}>
-                        {stat.k}
-                      </span>
-                      <b style={{ color: stat.color, fontSize: 15 }}>{stat.v}</b>
-                      <small>ต่าง {stat.sub}</small>
-                    </div>
-                  ))}
+              {diff && !samePick && diffRows.length ? (
+                <div className="diff card">
+                  <div className="diff-head">
+                    <span className="eyebrow">ตัวเลขที่ต่างกัน</span>
+                    <span className="mono diff-moved">
+                      {movedCount ? `${movedCount} ค่าเปลี่ยน` : "ไม่มีค่าไหนเปลี่ยน"}
+                    </span>
+                  </div>
+                  <table className="diff-table">
+                    <thead>
+                      <tr>
+                        <th />
+                        <th>{shortThaiDate(diff.left.date)} · {slotDef(diff.left.slot).th}</th>
+                        <th>{shortThaiDate(diff.right.date)} · {slotDef(diff.right.slot).th}</th>
+                        <th>ต่าง</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {diffRows.map((row) => {
+                        const moved = (row.delta ?? 0) !== 0;
+                        return (
+                          <tr key={row.k} className={moved ? "" : "flat"}>
+                            <th>{row.k}</th>
+                            {/* The row label already names the side, so the
+                             * delta column is the only thing tinted here. */}
+                            <td className="mono">{row.l}</td>
+                            <td className="mono">{row.r}</td>
+                            <td
+                              className={`mono diff-delta ${
+                                !moved ? "" : (row.delta ?? 0) > 0 ? "is-up" : "is-down"
+                              }`}
+                            >
+                              {row.delta == null ? "—" : signed(row.delta, row.digits)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               ) : null}
 
-              {diff && (diff.left.note || diff.right.note) ? (
+              {diff && !samePick && (diff.left.note || diff.right.note) ? (
                 <div className="ai-note">
-                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <span className="diamond" style={{ width: 13, height: 13 }} />
-                    <span style={{ font: "500 12.5px/1 var(--thai)", color: "var(--gold)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span className="diamond" style={{ width: 11, height: 11 }} />
+                    <span style={{ font: "500 12px/1 var(--thai)", color: "var(--gold)" }}>
                       โน้ตของทั้งสองช่วง
                     </span>
                   </div>
@@ -440,7 +489,7 @@ export default function ComparePage() {
           {mode === "timeline" ? (
             <div className="timeline-view">
               <div className="timeline-head">
-                <span className="eyebrow">TIMELINE · {timelineDate ? stampDate(timelineDate) : "—"}</span>
+                <span className="eyebrow">ไทม์ไลน์ · {timelineDate ? stampDate(timelineDate) : "—"}</span>
                 <span style={{ font: "300 11.5px/1 var(--thai)", color: "var(--t-40)" }}>
                   ไล่ดูภาพ 5 ช่วงต่อเนื่องกันในวันเดียว
                 </span>

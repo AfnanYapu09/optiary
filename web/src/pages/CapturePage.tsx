@@ -5,10 +5,12 @@ import { useSession } from "../lib/session.tsx";
 import { useToast } from "../lib/toast.tsx";
 import ShotCell from "../components/ShotCell.tsx";
 import AssistantPanel from "../components/AssistantPanel.tsx";
+import Lightbox, { type LightboxItem } from "../components/Lightbox.tsx";
 import { fullThaiDate, num, signed, todayIso } from "../lib/format.ts";
 import { syncEntryToCloud } from "../lib/firebase.ts";
 import {
   IMAGE_KINDS,
+  KIND_LABELS,
   SLOTS,
   slotDef,
   type DayNews,
@@ -64,25 +66,70 @@ function NewsPanel({ news }: { news: DayNews }) {
   );
 }
 
-function metricRows(entry: EntryRecord) {
+const chgClass = (v: number | null | undefined) => ((v ?? 0) >= 0 ? "is-up" : "is-down");
+
+/**
+ * The numbers off the screenshots, laid out the way an option book is read:
+ * Put against Call in two columns, then the day's single figures underneath.
+ * A flat list of twelve rows made the reader do that pairing in their head.
+ */
+function MetricsPanel({ entry }: { entry: EntryRecord }) {
   const m = entry.metrics;
-  const chgColor = (v: number | null | undefined) => ((v ?? 0) >= 0 ? "var(--green)" : "var(--red)");
-  const all = [
-    { key: "ราคาปิดช่วง", value: num(m.priceClose, 1), color: "var(--ink)", raw: m.priceClose, core: true },
-    { key: "Intraday Put", value: num(m.intradayPut), color: "var(--green)", raw: m.intradayPut, core: false },
-    { key: "Intraday Call", value: num(m.intradayCall), color: "var(--red)", raw: m.intradayCall, core: false },
-    { key: "Vol", value: num(m.vol, 2), color: "var(--ink)", raw: m.vol, core: false },
-    { key: "Vol Chg", value: signed(m.volChg, 2), color: chgColor(m.volChg), raw: m.volChg, core: false },
-    { key: "Future Chg", value: signed(m.futureChg, 1), color: chgColor(m.futureChg), raw: m.futureChg, core: false },
-    { key: "Call OI", value: num(m.callOi), color: "var(--green)", raw: m.callOi, core: true },
-    { key: "Put OI", value: num(m.putOi), color: "var(--red)", raw: m.putOi, core: true },
-    { key: "P/C Ratio", value: num(m.pcRatio, 2), color: "var(--ink)", raw: m.pcRatio, core: true },
-    { key: "Call OI Chg", value: signed(m.callOiChg), color: chgColor(m.callOiChg), raw: m.callOiChg, core: false },
-    { key: "Put OI Chg", value: signed(m.putOiChg), color: chgColor(m.putOiChg), raw: m.putOiChg, core: false },
-    { key: "OI Chg รวม", value: signed(m.oiChgTotal), color: chgColor(m.oiChgTotal), raw: m.oiChgTotal, core: true },
+  // Ordered to match the three screenshots as they are captured and shown
+  // above: Intraday, then OI, then OI Chg.
+  const pairs: Array<{ label: string; put: string; call: string; signedPair?: boolean }> = [
+    { label: "INTRADAY", put: num(m.intradayPut), call: num(m.intradayCall) },
+    { label: "OI", put: num(m.putOi), call: num(m.callOi) },
+    { label: "OI CHG", put: signed(m.putOiChg), call: signed(m.callOiChg), signedPair: true },
   ];
-  // Always show the core rows; add the extra ones only once the model has read them.
-  return all.filter((row) => row.core || (row.raw !== null && row.raw !== undefined));
+  // Everything on the Intraday header is always shown, even unread. A field
+  // that silently disappears when null reads as "this app doesn't track it",
+  // where a "—" correctly says "not read off this screenshot".
+  const singles = [
+    { label: "P/C Ratio", value: num(m.pcRatio, 2), cls: "" },
+    { label: "OI เปลี่ยนแปลงรวม", value: signed(m.oiChgTotal), cls: chgClass(m.oiChgTotal) },
+    { label: "ราคาปัจจุบัน", value: num(m.priceClose, 1), cls: "" },
+    { label: "Future Chg", value: signed(m.futureChg, 1), cls: chgClass(m.futureChg) },
+    { label: "Vol", value: num(m.vol, 2), cls: "" },
+    { label: "Vol Chg", value: signed(m.volChg, 2), cls: chgClass(m.volChg) },
+  ];
+
+  return (
+    <>
+      <div className="pc-table">
+        <div className="pc-head">
+          <span />
+          <span className="is-put">PUT</span>
+          <span className="is-call">CALL</span>
+        </div>
+        {pairs.map((row) => (
+          <div key={row.label} className="pc-row">
+            <span className="pc-label">{row.label}</span>
+            <b className={`mono ${row.signedPair ? chgClass(m.putOiChg) : "is-put"}`}>{row.put}</b>
+            <b className={`mono ${row.signedPair ? chgClass(m.callOiChg) : "is-call"}`}>{row.call}</b>
+          </div>
+        ))}
+      </div>
+
+      <div className="metric-singles">
+        {singles.map((row) => (
+          <div key={row.label} className={`metric-single${row.value === "—" ? " unread" : ""}`}>
+            <span className="eyebrow">{row.label}</span>
+            <b className={`mono ${row.value === "—" ? "" : row.cls}`}>{row.value}</b>
+          </div>
+        ))}
+      </div>
+
+      {/* The model's full read-out is long and is not what the eye should land
+       * on — folded away, with the numbers above left as the headline. */}
+      {m.summary ? (
+        <details className="metric-summary">
+          <summary>สิ่งที่ AI อ่านได้จากภาพ</summary>
+          <p>{m.summary}</p>
+        </details>
+      ) : null}
+    </>
+  );
 }
 
 export default function CapturePage() {
@@ -99,6 +146,7 @@ export default function CapturePage() {
   const [note, setNote] = useState("");
   const [tagDraft, setTagDraft] = useState("");
   const [addingTag, setAddingTag] = useState(false);
+  const [viewing, setViewing] = useState<number | null>(null);
   const saveTimer = useRef<number | null>(null);
 
   const slotParam = params.get("slot");
@@ -258,9 +306,26 @@ export default function CapturePage() {
 
   const canExtract = entry ? Object.keys(entry.images).length > 0 : false;
 
+  /** Only the shots this slot actually has, in capture order, so the viewer's
+   * arrows step through Intraday → OI → OI Chg without hitting empty slots. */
+  const shots: Array<{ kind: ImageKind; item: LightboxItem }> = IMAGE_KINDS.flatMap((kind) => {
+    const image = entry?.images[kind];
+    if (!image) return [];
+    return [
+      {
+        kind,
+        item: {
+          url: image.url,
+          title: KIND_LABELS[kind],
+          caption: `${fullThaiDate(date)} · ช่วง${def.th} · ${def.from}–${def.to}`,
+        },
+      },
+    ];
+  });
+
   return (
     <div className="capture">
-      <header className="capture-bar">
+      <header className="toolbar capture-bar">
         <div className="capture-bar-left">
           <button className="linkish" onClick={() => navigate("/")}>
             ‹ ปฏิทิน
@@ -355,13 +420,18 @@ export default function CapturePage() {
                 onRemove={
                   entry?.images[kind] ? () => void removeImage(entry.images[kind]!.id) : undefined
                 }
+                onView={
+                  entry?.images[kind]
+                    ? () => setViewing(shots.findIndex((s) => s.kind === kind))
+                    : undefined
+                }
               />
             ))}
           </div>
 
           <div className="capture-lower">
             <div className="capture-note">
-              <span className="eyebrow">NOTE</span>
+              <span className="eyebrow">โน้ตของช่วงนี้</span>
               <div className="note-box">
                 <textarea
                   value={note}
@@ -401,22 +471,10 @@ export default function CapturePage() {
             </div>
 
             <div className="capture-metrics">
-              <span className="eyebrow">EXTRACTED BY AI</span>
+              <span className="eyebrow">ตัวเลขที่ AI อ่านได้</span>
               <div className="metrics-box">
                 {entry && entry.metrics.extractedAt ? (
-                  <>
-                    {metricRows(entry).map((row) => (
-                      <div key={row.key} className="metric-row">
-                        <span>{row.key}</span>
-                        <b className="mono" style={{ color: row.color }}>
-                          {row.value}
-                        </b>
-                      </div>
-                    ))}
-                    {entry.metrics.summary ? (
-                      <p className="metric-summary">{entry.metrics.summary}</p>
-                    ) : null}
-                  </>
+                  <MetricsPanel entry={entry} />
                 ) : (
                   <div className="empty">
                     {canExtract
@@ -442,6 +500,15 @@ export default function CapturePage() {
           />
         </aside>
       </div>
+
+      {viewing !== null && shots[viewing] ? (
+        <Lightbox
+          items={shots.map((s) => s.item)}
+          index={viewing}
+          onIndex={setViewing}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </div>
   );
 }

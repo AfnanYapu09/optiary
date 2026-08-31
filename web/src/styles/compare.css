@@ -5,18 +5,6 @@
   min-height: 0;
 }
 
-.compare-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 26px;
-  border-bottom: 1px solid var(--line);
-  background: var(--chrome);
-  flex: none;
-  flex-wrap: wrap;
-}
-
 .compare-body {
   flex: 1;
   display: flex;
@@ -24,14 +12,14 @@
 }
 
 .compare-side {
-  width: 244px;
+  width: 228px;
   flex: none;
   border-right: 1px solid var(--line);
   background: var(--chrome);
-  padding: 20px 18px;
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-height: 0;
 }
 .compare-group {
@@ -47,11 +35,11 @@
   gap: 6px;
 }
 .compare-kinds button {
-  padding: 9px 12px;
-  border-radius: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
   border: none;
   background: transparent;
-  font: 400 12.5px/1 var(--thai);
+  font: 400 12px/1.3 var(--thai);
   color: var(--t-55);
   cursor: pointer;
   text-align: left;
@@ -75,12 +63,12 @@
 }
 .library-item {
   display: flex;
-  gap: 10px;
+  gap: 9px;
   align-items: center;
-  padding: 7px;
-  border-radius: 9px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: var(--fill);
+  background: var(--panel);
 }
 .library-item.selected {
   border-color: var(--gold-line);
@@ -149,12 +137,45 @@
   flex-wrap: wrap;
 }
 .pair-chip {
-  padding: 7px 12px;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
   background: var(--fill-2);
-  border: 1px solid var(--line-2);
-  font: 400 11.5px/1 var(--thai);
+  border: none;
+  font: 400 11.5px/1.3 var(--thai);
   color: var(--t-60);
+}
+.pair-chip.ghosted {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--t-35);
+}
+
+/* Only one capture of this kind exists — shown on its own rather than split
+ * against itself. */
+.solo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+}
+.solo img {
+  flex: 1;
+  min-height: 0;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+.solo p {
+  margin: 0;
+  max-width: 460px;
+  text-align: center;
+  font: 300 12px/1.7 var(--thai);
+  color: var(--t-45);
+  text-wrap: pretty;
 }
 
 .split {
@@ -235,11 +256,75 @@
   color: var(--gold-ink);
 }
 
-.pair-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+/* ---------- diff table ---------- */
+
+/* A comparison is a table, not twelve cards: one row per measure, both sides in
+ * aligned columns, and the delta where the eye already is. */
+.diff {
   flex: none;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.diff-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.diff-moved {
+  font-size: 10.5px;
+  color: var(--t-35);
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.diff-table th,
+.diff-table td {
+  text-align: right;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+.diff-table thead th {
+  font: 400 10.5px/1.3 var(--thai);
+  color: var(--t-35);
+  font-weight: 400;
+  border-bottom: 1px solid var(--line-2);
+  padding-bottom: 9px;
+}
+.diff-table tbody th {
+  text-align: left;
+  font: 400 12px/1.3 var(--thai);
+  color: var(--t-55);
+  font-weight: 400;
+  padding-left: 0;
+  width: 40%;
+}
+.diff-table tbody tr {
+  border-bottom: 1px solid var(--line);
+}
+.diff-table tbody tr:last-child {
+  border-bottom: none;
+}
+.diff-table td {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.diff-table td:last-child {
+  padding-right: 0;
+}
+/* Nothing moved on this row — it stays available but stops competing. */
+.diff-table tr.flat th,
+.diff-table tr.flat td {
+  color: var(--t-30);
+}
+.diff-delta {
+  color: var(--t-30);
 }
 
 /* ---------- grid mode ---------- */
@@ -401,13 +486,18 @@
   text-wrap: pretty;
 }
 
-@media (max-width: 1100px) {
-  .pair-stats {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 700px) {
+  /* The table has to keep four columns to stay a comparison, so it scrolls
+   * inside its own card rather than squeezing. */
+  .diff {
+    overflow-x: auto;
+  }
+  .diff-table {
+    min-width: 420px;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .compare-body {
     flex-direction: column-reverse;
   }

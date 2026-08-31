@@ -61,8 +61,31 @@ export default function DualAxisChart({ series }: { series: SeriesPoint[] }) {
       .join(" ")
       .trim();
 
+  /** The price line closed down to the baseline, for the gradient fill. */
+  const areaPath = useMemo(() => {
+    const line = path("price");
+    // A broken line would close into a nonsense polygon, so only fill under a
+    // continuous one.
+    if (!line || (line.match(/M/g)?.length ?? 0) !== 1) return "";
+    const drawn = scaled.filter((item) => item.price !== null);
+    if (drawn.length < 2) return "";
+    const base = H - PAD.bottom;
+    return `${line} L${drawn.at(-1)!.x.toFixed(1)},${base} L${drawn[0].x.toFixed(1)},${base} Z`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scaled]);
+
   if (series.length === 0) {
     return <div className="empty">ยังไม่มีตัวเลขพอจะวาดกราฟ — อัปโหลดภาพแล้วให้ AI ถอดตัวเลขก่อน</div>;
+  }
+  // One reading draws no line at all; say so instead of showing an empty grid.
+  if (series.length === 1) {
+    const only = series[0];
+    return (
+      <div className="empty">
+        มีข้อมูลอยู่ช่วงเดียว ({shortThaiDate(only.date)} · {slotDef(only.slot).th}) — บันทึกอีกอย่างน้อย 1 ช่วง
+        แล้วเส้นกราฟจะขึ้นตรงนี้
+      </div>
+    );
   }
 
   const active = hover !== null ? scaled[hover] : null;
@@ -94,11 +117,44 @@ export default function DualAxisChart({ series }: { series: SeriesPoint[] }) {
           />
         ))}
 
-        <path d={path("oi")} fill="none" stroke="var(--blue)" strokeWidth={2} strokeDasharray="6 5" strokeLinejoin="round" />
-        <path d={path("price")} fill="none" stroke="var(--gold)" strokeWidth={2.4} strokeLinejoin="round" />
+        {/* Price carries a soft fill so the two series never read as one pair of
+            lines — the dashed OI trace stays legible crossing over it. */}
+        <defs>
+          <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="var(--gold)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {areaPath ? <path d={areaPath} fill="url(#priceFill)" stroke="none" /> : null}
+
+        <path
+          d={path("oi")}
+          fill="none"
+          stroke="var(--call)"
+          strokeWidth={1.8}
+          strokeDasharray="5 4"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        <path
+          d={path("price")}
+          fill="none"
+          stroke="var(--gold)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
 
         {active ? (
-          <line x1={active.x} x2={active.x} y1={0} y2={H - PAD.bottom} stroke="var(--gold-line)" strokeWidth={1} />
+          <line
+            x1={active.x}
+            x2={active.x}
+            y1={0}
+            y2={H - PAD.bottom}
+            stroke="var(--gold-line)"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
         ) : null}
 
         {scaled.map((item, index) => (

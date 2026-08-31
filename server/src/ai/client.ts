@@ -106,6 +106,63 @@ export function describeAiError(error: unknown): { status: number; message: stri
 }
 
 /**
+ * Whether a failed call is worth trying again. Rate limits and 5xx/connection
+ * blips are the provider having a bad second; auth, quota exhaustion and bad
+ * requests will fail identically no matter how often we ask.
+ */
+export function isTransientAiError(error: unknown): boolean {
+  if (error instanceof AiUnavailableError) return false;
+  if (error instanceof Anthropic.AuthenticationError) return false;
+  if (error instanceof Anthropic.BadRequestError) return false;
+  if (error instanceof Anthropic.APIConnectionError) return true;
+  if (error instanceof Anthropic.RateLimitError) return true;
+  if (error instanceof Anthropic.APIError) return (error.status ?? 0) >= 500;
+
+  // Gemini and anything else surfaces as a plain Error carrying the status in
+  // its text. Classify on that raw text — NOT on describeAiError's message,
+  // which is written for the user: it renders every 429 as "โควต้าเต็ม", so
+  // matching it would treat ordinary rate limits as permanent, and it maps a
+  // bad API key to 503, which would make auth failures look retryable.
+  if (!(error instanceof Error)) return false;
+  const text = error.message;
+  if (/API[_ ]?key|PERMISSION_DENIED|UNAUTHENTICATED|\b401\b|\b403\b/i.test(text)) return false;
+  // A hard quota ceiling is a 429 that retrying cannot clear.
+  if (/RESOURCE_EXHAUSTED|exceeded your current quota|billing/i.test(text)) return false;
+  if (/\b429\b|rate limit/i.test(text)) return true;
+  if (/\b5\d{2}\b|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|fetch failed/i.test(text)) return true;
+  return false;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Runs `attempt`, retrying transient provider failures with exponential backoff
+ * and jitter. One flaky response used to lose the whole turn — including any
+ * screenshots the user had attached, which they then had to pick again.
+ */
+export async function withAiRetry<T>(
+  attempt: (tryIndex: number) => Promise<T>,
+  options: { tries?: number; baseMs?: number; onRetry?: (info: { tryIndex: number; waitMs: number; error: unknown }) => void } = {},
+): Promise<T> {
+  const tries = options.tries ?? 3;
+  const baseMs = options.baseMs ?? 700;
+  let lastError: unknown;
+  for (let i = 0; i < tries; i += 1) {
+    try {
+      return await attempt(i);
+    } catch (error) {
+      lastError = error;
+      if (i === tries - 1 || !isTransientAiError(error)) throw error;
+      // Jitter keeps several stalled turns from retrying in lockstep.
+      const waitMs = Math.round(baseMs * 2 ** i * (0.75 + Math.random() * 0.5));
+      options.onRetry?.({ tryIndex: i, waitMs, error });
+      await sleep(waitMs);
+    }
+  }
+  throw lastError;
+}
+
+/**
  * The Gemini SDK reports failures as plain Errors carrying the HTTP status in
  * the message, so classify on that rather than letting a raw string through.
  */

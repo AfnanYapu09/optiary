@@ -1,109 +1,150 @@
 /*
- * Design tokens. Light is the default theme; `data-theme="dark"` on <html>
- * swaps to the original dark palette. `data-accent` re-points the accent group.
+ * Optiary design tokens — "trading terminal".
+ *
+ * Dark is the primary surface (that is where this app is actually used, at
+ * night, next to a chart). Light stays available and mirrors every token so no
+ * rule below ever needs a theme branch.
+ *
+ * Colour has one job here: telling option data apart at a glance.
+ *   --call / --put  option side   (blue / amber — the CME QuikStrike convention)
+ *   --up / --down   direction     (green / red)
+ *   --accent        the app itself — brand, actions, "you are here"
+ * Never spend --up/--down on a Call vs Put distinction; the reader would have
+ * no colour left to read a change with.
  */
 :root {
-  --bg: #f8f7f3;
-  --chrome: #ffffff;
+  /* Surfaces — four steps from page to raised card. */
+  --bg: #f7f6f3;
+  --chrome: #fffffe;
   --panel: #ffffff;
-  --ink: #23201a;
-  --green: #3c8f66;
-  --red: #c15656;
-  --blue: #3f77b8;
+  --panel-2: #fbfaf8;
+  --ink: #1a1d21;
 
-  --line: rgba(25, 22, 16, 0.09);
-  --line-2: rgba(25, 22, 16, 0.13);
-  --line-3: rgba(25, 22, 16, 0.18);
-  --fill: rgba(25, 22, 16, 0.03);
-  --fill-2: rgba(25, 22, 16, 0.055);
+  /* Option sides. */
+  --call: #2f6fd0;
+  --put: #b8791a;
+  --call-fill: rgba(47, 111, 208, 0.12);
+  --put-fill: rgba(184, 121, 26, 0.14);
 
-  --t-80: rgba(35, 32, 26, 0.8);
-  --t-60: rgba(35, 32, 26, 0.62);
-  --t-55: rgba(35, 32, 26, 0.55);
-  --t-45: rgba(35, 32, 26, 0.46);
-  --t-40: rgba(35, 32, 26, 0.4);
-  --t-35: rgba(35, 32, 26, 0.34);
-  --t-30: rgba(35, 32, 26, 0.28);
+  /* Direction. Both hold ~4.5:1 on --bg, since deltas are set small. */
+  --up: #16794a;
+  --down: #bf353a;
+  --blue: var(--call);
+  --green: var(--up);
+  --red: var(--down);
 
-  /* Accent — gold by default; overridden by [data-accent]. */
+  --line: rgba(20, 24, 30, 0.09);
+  --line-2: rgba(20, 24, 30, 0.13);
+  --line-3: rgba(20, 24, 30, 0.2);
+  --fill: rgba(20, 24, 30, 0.028);
+  --fill-2: rgba(20, 24, 30, 0.055);
+
+  --t-80: rgba(26, 29, 33, 0.82);
+  --t-60: rgba(26, 29, 33, 0.64);
+  --t-55: rgba(26, 29, 33, 0.56);
+  --t-45: rgba(26, 29, 33, 0.47);
+  --t-40: rgba(26, 29, 33, 0.4);
+  --t-35: rgba(26, 29, 33, 0.34);
+  --t-30: rgba(26, 29, 33, 0.26);
+
+  /* Accent — gold by default; [data-accent] re-points the whole group. */
   --accent-rgb: 154, 108, 31;
   --gold: rgb(var(--accent-rgb));
   --gold-hi: #7c5615;
-  --gold-ink: #fff8ea;
-  --gold-fill: rgba(var(--accent-rgb), 0.1);
+  --gold-ink: #fffaf0;
+  --gold-fill: rgba(var(--accent-rgb), 0.09);
   --gold-fill-2: rgba(var(--accent-rgb), 0.16);
-  --gold-line: rgba(var(--accent-rgb), 0.42);
+  --gold-line: rgba(var(--accent-rgb), 0.4);
+  --glow: rgba(var(--accent-rgb), 0.18);
 
   --thai: "IBM Plex Sans Thai", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --topbar: 60px;
-  --radius: 10px;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --radius-xs: 7px;
+
+  /* Surfaces are lit, not outlined: a card is a lighter sheet with a soft
+   * shadow under it, so the UI needs almost no borders to hold together. */
+  --sheet: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.62));
+  --shadow: 0 1px 2px rgba(20, 24, 30, 0.04), 0 10px 28px -14px rgba(20, 24, 30, 0.18);
+  --shadow-lg: 0 2px 6px rgba(20, 24, 30, 0.05), 0 28px 60px -28px rgba(20, 24, 30, 0.3);
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #0f1113;
-  --chrome: #111417;
-  --panel: #131619;
-  --ink: #edeae4;
-  --green: #7fbf9b;
-  --red: #d98080;
-  --blue: #6f9fd8;
+  --bg: #08090c;
+  --chrome: #0c0e12;
+  --panel: #14171d;
+  --panel-2: #1a1e25;
+  --ink: #eef1f6;
 
-  --line: rgba(255, 255, 255, 0.07);
-  --line-2: rgba(255, 255, 255, 0.09);
-  --line-3: rgba(255, 255, 255, 0.12);
+  --call: #58a0ff;
+  --put: #f0ab3d;
+  --call-fill: rgba(88, 160, 255, 0.15);
+  --put-fill: rgba(240, 171, 61, 0.15);
+
+  --up: #3ecf8e;
+  --down: #f2555a;
+
+  --line: rgba(255, 255, 255, 0.05);
+  --line-2: rgba(255, 255, 255, 0.08);
+  --line-3: rgba(255, 255, 255, 0.14);
   --fill: rgba(255, 255, 255, 0.03);
-  --fill-2: rgba(255, 255, 255, 0.05);
+  --fill-2: rgba(255, 255, 255, 0.06);
 
-  --t-80: rgba(237, 234, 228, 0.8);
-  --t-60: rgba(237, 234, 228, 0.6);
-  --t-55: rgba(237, 234, 228, 0.55);
-  --t-45: rgba(237, 234, 228, 0.45);
-  --t-40: rgba(237, 234, 228, 0.4);
-  --t-35: rgba(237, 234, 228, 0.35);
-  --t-30: rgba(237, 234, 228, 0.3);
+  --t-80: rgba(231, 235, 241, 0.82);
+  --t-60: rgba(231, 235, 241, 0.62);
+  --t-55: rgba(231, 235, 241, 0.54);
+  --t-45: rgba(231, 235, 241, 0.45);
+  --t-40: rgba(231, 235, 241, 0.38);
+  --t-35: rgba(231, 235, 241, 0.32);
+  --t-30: rgba(231, 235, 241, 0.24);
 
-  --gold-hi: #eccb8d;
-  --gold-ink: #14110c;
-  --accent-rgb: 217, 178, 106;
+  --accent-rgb: 226, 184, 108;
+  --gold-hi: #f2d5a3;
+  --gold-ink: #12100b;
+  --gold-fill: rgba(var(--accent-rgb), 0.1);
+  --gold-fill-2: rgba(var(--accent-rgb), 0.18);
+  --gold-line: rgba(var(--accent-rgb), 0.38);
+  --glow: rgba(var(--accent-rgb), 0.22);
+
+  /* Dark cards get a lit top edge instead of an outline — that highlight is
+   * what makes a surface read as raised rather than as a drawn box. */
+  --sheet: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012));
+  --shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 14px 34px -20px rgba(0, 0, 0, 0.9);
+  --shadow-lg: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 30px 70px -30px rgba(0, 0, 0, 1);
   color-scheme: dark;
 }
 
 /* Accent presets — one RGB triple drives fill/line/text tints in both themes. */
 :root[data-accent="sage"] {
   --accent-rgb: 74, 120, 92;
-}
-:root[data-accent="sage"] {
   --gold-hi: #3a6249;
 }
 :root[data-theme="dark"][data-accent="sage"] {
-  --accent-rgb: 138, 190, 156;
+  --accent-rgb: 122, 200, 158;
   --gold-hi: #a9d4bb;
-  --gold-ink: #10201a;
+  --gold-ink: #08150f;
 }
 :root[data-accent="slate"] {
   --accent-rgb: 74, 104, 158;
-}
-:root[data-accent="slate"] {
   --gold-hi: #3a5480;
 }
 :root[data-theme="dark"][data-accent="slate"] {
-  --accent-rgb: 138, 172, 224;
+  --accent-rgb: 130, 172, 235;
   --gold-hi: #b3ccef;
-  --gold-ink: #0e1626;
+  --gold-ink: #080e18;
 }
 :root[data-accent="clay"] {
   --accent-rgb: 166, 92, 62;
-}
-:root[data-accent="clay"] {
   --gold-hi: #82492f;
 }
 :root[data-theme="dark"][data-accent="clay"] {
-  --accent-rgb: 214, 150, 122;
+  --accent-rgb: 224, 148, 116;
   --gold-hi: #e6b39c;
-  --gold-ink: #24120b;
+  --gold-ink: #1a0c07;
 }
 
 * {
@@ -123,6 +164,7 @@ body {
   font-family: var(--thai);
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -141,65 +183,87 @@ select {
   color: inherit;
 }
 
+:focus-visible {
+  outline: 2px solid var(--gold-line);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--line-3);
   border-radius: 6px;
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--line-3);
+  border: 2.5px solid transparent;
   background-clip: content-box;
 }
 
 /* ---------- primitives ---------- */
 
+/* Every figure in this app is monospaced and tabular so columns of numbers line
+ * up between rows and don't jitter as values tick. */
 .mono {
   font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
+/* Labels are quiet Thai text, not shouted mono capitals — the numbers are what
+ * should carry the page. Add .caps only where a real ticker code is shown. */
 .eyebrow {
-  font: 400 10px/1 var(--mono);
-  color: var(--t-35);
+  font: 400 11.5px/1.3 var(--thai);
+  color: var(--t-45);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.eyebrow.caps {
+  font: 500 9.5px/1.3 var(--mono);
   letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--t-35);
 }
 
 .diamond {
   background: var(--gold);
   transform: rotate(45deg);
-  border-radius: 3px;
+  border-radius: 2px;
   flex: none;
 }
 
 .pill {
-  padding: 5px 10px;
-  border-radius: 20px;
+  padding: 5px 11px;
+  border-radius: 999px;
   background: var(--gold-fill-2);
-  font: 400 10.5px/1 var(--mono);
+  font: 500 10.5px/1.3 var(--mono);
   color: var(--gold);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
+/* Buttons are filled pills. A 1px outlined rectangle is the single strongest
+ * "old admin panel" cue, so nothing here is drawn with a border. */
 .btn {
-  border: 1px solid var(--line-3);
-  background: transparent;
-  border-radius: 8px;
-  padding: 9px 14px;
-  font: 400 12px/1 var(--thai);
+  border: none;
+  background: var(--fill-2);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font: 400 12.5px/1.25 var(--thai);
   color: var(--t-60);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: color 0.16s, background 0.16s;
   white-space: nowrap;
 }
 .btn:hover:not(:disabled) {
-  border-color: var(--gold-line);
-  color: var(--gold);
+  color: var(--ink);
+  background: var(--line-2);
 }
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -207,51 +271,76 @@ select {
   border: none;
   background: var(--gold);
   color: var(--gold-ink);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font: 500 12px/1 var(--thai);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font: 500 12.5px/1.25 var(--thai);
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: 0 6px 18px -8px var(--gold);
+  transition: background 0.16s, box-shadow 0.16s, transform 0.16s;
 }
 .btn-gold:hover:not(:disabled) {
   background: var(--gold-hi);
+  box-shadow: 0 10px 26px -8px var(--gold);
+  transform: translateY(-1px);
 }
 .btn-gold:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+.linkish {
+  border: none;
+  background: none;
+  padding: 0;
+  font: 400 12px/1.4 var(--thai);
+  color: var(--gold);
+  cursor: pointer;
+  text-align: left;
+}
+.linkish:hover {
+  color: var(--gold-hi);
 }
 
 .seg {
   display: flex;
-  background: var(--fill);
-  border: 1px solid var(--line-2);
-  border-radius: 8px;
-  overflow: hidden;
+  background: var(--fill-2);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
 }
 .seg button {
-  padding: 8px 14px;
+  padding: 6px 14px;
   border: none;
+  border-radius: 999px;
   background: transparent;
-  font: 400 12px/1 var(--thai);
+  font: 400 12px/1.3 var(--thai);
   color: var(--t-55);
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.16s, color 0.16s;
+}
+.seg button:hover {
+  color: var(--ink);
 }
 .seg button[aria-pressed="true"] {
   background: var(--gold);
   color: var(--gold-ink);
+  font-weight: 500;
 }
 
 .card {
-  border-radius: 12px;
-  border: 1px solid var(--line-2);
-  background: var(--panel);
+  border-radius: var(--radius);
+  border: none;
+  background-color: var(--panel);
+  background-image: var(--sheet);
+  box-shadow: var(--shadow);
 }
 
 .toggle {
-  width: 36px;
-  height: 20px;
-  border-radius: 12px;
+  width: 34px;
+  height: 19px;
+  border-radius: 10px;
   background: var(--line-3);
   border: none;
   display: flex;
@@ -267,8 +356,8 @@ select {
   justify-content: flex-end;
 }
 .toggle span {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: var(--t-60);
   display: block;
@@ -279,19 +368,21 @@ select {
 
 .field {
   width: 100%;
-  padding: 14px 16px;
+  padding: 13px 15px;
   background: var(--fill-2);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius);
-  font: 300 14px/1 var(--thai);
+  border: none;
+  border-radius: var(--radius-sm);
+  font: 300 13.5px/1.3 var(--thai);
   color: var(--ink);
   outline: none;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: box-shadow 0.16s, background 0.16s;
 }
 .field:focus {
-  border-color: var(--gold-line);
+  box-shadow: inset 0 0 0 1px var(--gold-line);
 }
 .field::placeholder {
-  color: var(--t-40);
+  color: var(--t-35);
 }
 
 /* ---------- app shell ---------- */
@@ -302,6 +393,10 @@ select {
   height: 100%;
   min-height: 100%;
   background: var(--bg);
+  /* A single soft accent wash behind the chrome keeps the dark ground from
+   * reading as flat black — the cheapest depth in the whole design. */
+  background-image: radial-gradient(85% 55% at 22% -12%, var(--glow), transparent 68%);
+  background-repeat: no-repeat;
 }
 
 .topbar {
@@ -309,34 +404,63 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 26px;
+  padding: 0 18px 0 20px;
   height: var(--topbar);
-  border-bottom: 1px solid var(--line);
-  background: var(--chrome);
+  background: transparent;
   flex: none;
+  z-index: 20;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 11px;
+  flex: none;
 }
 .brand .diamond {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  box-shadow: 0 0 18px var(--gold);
 }
 .brand b {
   font: 500 13px/1 var(--thai);
   color: var(--ink);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.2em;
 }
-.brand .contract {
-  font: 400 10.5px/1 var(--mono);
-  color: var(--t-35);
-  margin-left: 10px;
-  padding-left: 12px;
-  border-left: 1px solid var(--line-3);
+
+/* Live contract readout — the one piece of the top bar that is market data. */
+.ticker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--fill-2);
+  font: 500 10.5px/1 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--t-60);
   white-space: nowrap;
+}
+.ticker .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--up);
+  box-shadow: 0 0 7px var(--up);
+  flex: none;
+}
+.ticker em {
+  font-style: normal;
+  color: var(--t-35);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .search {
@@ -345,28 +469,48 @@ select {
   gap: 9px;
   padding: 8px 14px;
   background: var(--fill-2);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  width: 280px;
+  border: none;
+  border-radius: 999px;
+  width: 260px;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: box-shadow 0.16s;
+}
+.search:focus-within {
+  box-shadow: inset 0 0 0 1px var(--gold-line);
 }
 .search input {
   flex: 1;
   border: none;
   background: none;
   outline: none;
-  font: 300 12.5px/1 var(--thai);
+  font: 300 12px/1.3 var(--thai);
   color: var(--ink);
   min-width: 0;
 }
 .search input::placeholder {
-  color: var(--t-40);
+  color: var(--t-35);
 }
 .search .ring {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   border: 1.5px solid var(--t-35);
   border-radius: 50%;
   flex: none;
+}
+.search kbd {
+  font: 400 9.5px/1 var(--mono);
+  color: var(--t-30);
+  background: var(--fill-2);
+  border-radius: 4px;
+  padding: 4px 5px;
+  flex: none;
+}
+
+.clock {
+  font: 400 10.5px/1 var(--mono);
+  color: var(--t-40);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .avatar {
@@ -374,11 +518,84 @@ select {
   height: 30px;
   border-radius: 50%;
   background: var(--fill-2);
-  border: 1px solid var(--line-3);
+  border: none;
   flex: none;
   object-fit: cover;
   padding: 0;
   cursor: pointer;
+  box-shadow: 0 0 0 1px var(--line-2);
+  transition: box-shadow 0.16s;
+}
+.avatar:hover {
+  box-shadow: 0 0 0 2px var(--gold-line);
+}
+
+/* ---------- profile menu ---------- */
+
+.profile {
+  position: relative;
+  flex: none;
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background-color: var(--panel-2);
+  box-shadow: 0 0 0 1px var(--line-2), var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: menu-in 0.13s ease-out;
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.profile-who {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px 11px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.profile-who b {
+  font: 500 12.5px/1.3 var(--thai);
+  color: var(--ink);
+}
+.profile-who span {
+  font-size: 10.5px;
+  color: var(--t-40);
+  overflow-wrap: anywhere;
+}
+
+.profile-menu button {
+  text-align: left;
+  border: none;
+  background: none;
+  border-radius: var(--radius-xs);
+  padding: 9px 11px;
+  font: 400 12.5px/1.3 var(--thai);
+  color: var(--t-60);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.profile-menu button:hover {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+.profile-menu button.danger:hover {
+  color: var(--down);
+  background: color-mix(in srgb, var(--down) 12%, transparent);
 }
 
 .body {
@@ -387,28 +604,37 @@ select {
   min-height: 0;
 }
 
+/* ---------- side rail ---------- */
+
 .sidenav {
-  width: 216px;
+  width: 210px;
   flex: none;
-  border-right: 1px solid var(--line);
-  background: var(--chrome);
-  padding: 20px 14px;
+  border: none;
+  background: transparent;
+  padding: 4px 12px 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   overflow: auto;
 }
-.sidenav .eyebrow {
-  padding: 6px 12px 10px;
+
+.nav-group {
+  padding: 16px 12px 7px;
 }
+.nav-group:first-child {
+  padding-top: 4px;
+}
+
 .sidenav a {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font: 400 13px/1 var(--thai);
-  color: var(--t-60);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font: 400 13px/1.3 var(--thai);
+  color: var(--t-55);
+  transition: background 0.16s, color 0.16s;
 }
 .sidenav a i {
   width: 6px;
@@ -417,43 +643,55 @@ select {
   background: var(--line-3);
   display: block;
   flex: none;
+  transition: background 0.16s, box-shadow 0.16s;
 }
 .sidenav a:hover {
   background: var(--fill-2);
   color: var(--ink);
 }
 .sidenav a.active {
-  background: var(--gold-fill);
+  background: var(--gold-fill-2);
   color: var(--gold);
   font-weight: 500;
 }
 .sidenav a.active i {
   background: var(--gold);
+  box-shadow: 0 0 10px var(--gold);
 }
 
 .dataset-card {
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 14px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--panel);
+  background-image: var(--sheet);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 .dataset-card b {
-  font: 400 22px/1 var(--mono);
+  font: 500 24px/1 var(--mono);
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .dataset-card small {
-  font: 300 11.5px/1.5 var(--thai);
-  color: var(--t-45);
+  font: 300 11px/1.5 var(--thai);
+  color: var(--t-40);
 }
 
+/* The content plate: one big rounded sheet floating on the washed ground. */
 .main {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: auto;
+  margin: 0 14px 14px 0;
+  border-radius: var(--radius);
+  background: var(--chrome);
+  box-shadow: var(--shadow-lg);
 }
 
 /* ---------- shared bits ---------- */
@@ -467,14 +705,49 @@ select {
 }
 .page-head h2 {
   margin: 0;
-  font: 300 27px/1.2 var(--thai);
+  font: 400 24px/1.25 var(--thai);
   color: var(--ink);
+  letter-spacing: -0.015em;
+}
+
+/* A page's own header. It sits inside the content plate, so it needs no rule
+ * under it — the padding below already separates it. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 20px 24px 16px;
+  background: transparent;
+  flex: none;
+}
+.toolbar h1 {
+  margin: 0;
+  font: 400 20px/1.3 var(--thai);
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+
+/* Put / Call / direction text colours, so markup can say what a number *is*. */
+.is-call {
+  color: var(--call);
+}
+.is-put {
+  color: var(--put);
+}
+.is-up {
+  color: var(--up);
+}
+.is-down {
+  color: var(--down);
 }
 
 .shot {
-  border-radius: var(--radius);
-  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  border: none;
   background: var(--panel);
+  box-shadow: var(--shadow);
   overflow: hidden;
   position: relative;
   display: block;
@@ -488,27 +761,27 @@ select {
 }
 .shot .tag {
   position: absolute;
-  left: 9px;
-  bottom: 8px;
-  padding: 4px 8px;
-  border-radius: 5px;
-  background: rgba(10, 11, 12, 0.78);
-  font: 400 9.5px/1 var(--mono);
-  color: var(--t-80);
-  letter-spacing: 0.08em;
+  left: 7px;
+  bottom: 7px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  background: rgba(8, 10, 13, 0.82);
+  font: 500 9px/1 var(--mono);
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.1em;
 }
 
 .dropzone {
-  border-radius: var(--radius);
-  border: 1px dashed var(--gold-line);
-  background: var(--gold-fill);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line-3);
+  background: var(--fill-2);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.14s, border-color 0.14s;
   text-align: center;
   padding: 10px;
   width: 100%;
@@ -519,58 +792,69 @@ select {
   border-color: var(--gold-line);
 }
 .dropzone .plus {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 1px solid var(--gold-line);
+  border: 1px solid var(--line-3);
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 400 15px/1 var(--mono);
-  color: var(--gold);
+  font: 400 14px/1 var(--mono);
+  color: var(--t-45);
   flex: none;
+  transition: border-color 0.14s, color 0.14s;
+}
+.dropzone:hover .plus,
+.dropzone.over .plus {
+  border-color: var(--gold-line);
+  color: var(--gold);
 }
 .dropzone span {
-  font: 300 12px/1.5 var(--thai);
-  color: var(--gold-line);
+  font: 300 11.5px/1.5 var(--thai);
+  color: var(--t-45);
 }
 .dropzone small {
-  font: 400 9.5px/1.6 var(--mono);
-  color: var(--t-35);
+  font: 400 9px/1.6 var(--mono);
+  color: var(--t-30);
+  letter-spacing: 0.06em;
 }
 
 .ai-note {
-  padding: 16px;
-  border-radius: 12px;
+  padding: 15px 16px;
+  border-radius: var(--radius-sm);
   background: var(--gold-fill);
-  border: 1px solid var(--gold-fill-2);
+  border: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 .ai-note p {
   margin: 0;
-  font: 300 13px/1.75 var(--thai);
+  font: 300 12.5px/1.8 var(--thai);
   color: var(--t-60);
   text-wrap: pretty;
 }
 
 .stat {
-  padding: 13px 14px;
-  border-radius: var(--radius);
-  background: var(--fill);
-  border: 1px solid var(--line-2);
+  padding: 13px 15px;
+  border-radius: var(--radius-sm);
+  background-color: var(--panel);
+  background-image: var(--sheet);
+  box-shadow: var(--shadow);
+  border: none;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 .stat b {
-  font: 400 18px/1 var(--mono);
+  font: 500 17px/1 var(--mono);
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .stat small {
-  font: 300 11px/1.35 var(--thai);
+  font: 300 10.5px/1.35 var(--thai);
   color: var(--t-40);
 }
 
@@ -579,17 +863,17 @@ select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 40px 24px;
-  color: var(--t-45);
-  font: 300 13px/1.7 var(--thai);
+  gap: 9px;
+  padding: 36px 24px;
+  color: var(--t-40);
+  font: 300 12.5px/1.7 var(--thai);
   text-align: center;
 }
 
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  bottom: 24px;
   transform: translateX(-50%);
   z-index: 60;
   display: flex;
@@ -599,31 +883,31 @@ select {
   pointer-events: none;
 }
 .toast div {
-  padding: 11px 18px;
-  border-radius: 10px;
-  background: var(--panel);
-  border: 1px solid var(--line-3);
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: none;
   font: 400 12.5px/1.4 var(--thai);
   color: var(--ink);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px var(--line-2), 0 18px 44px -14px rgba(0, 0, 0, 0.6);
   max-width: 90vw;
 }
 .toast div.err {
-  border-color: rgba(217, 128, 128, 0.5);
-  color: var(--red);
+  box-shadow: 0 0 0 1px var(--down), 0 18px 44px -14px rgba(0, 0, 0, 0.6);
+  color: var(--down);
 }
 .toast div.ok {
-  border-color: var(--gold-line);
+  box-shadow: 0 0 0 1px var(--gold-line), 0 18px 44px -14px rgba(0, 0, 0, 0.6);
   color: var(--gold);
 }
 
 .spin {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: 1.5px solid var(--gold-fill-2);
+  border: 1.5px solid var(--line-2);
   border-top-color: var(--gold);
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.75s linear infinite;
   flex: none;
   display: inline-block;
 }
@@ -637,7 +921,7 @@ select {
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .desktop-only {
     display: none !important;
   }
@@ -651,7 +935,11 @@ select {
     display: none;
   }
   .topbar {
-    padding: 0 18px;
+    padding: 0 16px;
+  }
+  .main {
+    margin: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
   }
 }
 
@@ -661,25 +949,34 @@ select {
   display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .mobile-tabs {
     display: flex;
     flex: none;
-    border-top: 1px solid var(--line);
+    border-top: none;
     background: var(--chrome);
-    padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   }
   .mobile-tabs a {
     flex: 1;
     text-align: center;
     padding: 9px 4px;
-    border-radius: 9px;
+    border-radius: 999px;
     font: 400 11px/1.2 var(--thai);
     color: var(--t-55);
   }
   .mobile-tabs a.active {
-    background: var(--gold-fill);
+    background: var(--gold-fill-2);
     color: var(--gold);
     font-weight: 500;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

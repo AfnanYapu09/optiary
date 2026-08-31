@@ -7,19 +7,40 @@ import {
   onAuthStateChanged,
   type User as FirebaseUser,
 } from "firebase/auth";
-import {
-  getFirestore,
-  doc,
-  getDocFromServer,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
 import firebaseConfig from "../firebase-applet-config.json";
 
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-/* CRITICAL: The app will break without specifying the firestoreDatabaseId */
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+/**
+ * Firestore is loaded on demand rather than at module scope. Auth has to be
+ * present on every page load (the session is resolved before anything renders),
+ * but Firestore is only touched by the background cloud-sync writes — so
+ * shipping it in the entry chunk made every first paint wait on code that most
+ * sessions never reach. `import()` puts it in its own chunk instead.
+ *
+ * CRITICAL: the app breaks without passing firestoreDatabaseId.
+ */
+let firestore: Promise<{
+  db: import("firebase/firestore").Firestore;
+  doc: typeof import("firebase/firestore").doc;
+  getDoc: typeof import("firebase/firestore").getDoc;
+  getDocFromServer: typeof import("firebase/firestore").getDocFromServer;
+  setDoc: typeof import("firebase/firestore").setDoc;
+}> | null = null;
+
+function loadFirestore() {
+  if (!firestore) {
+    firestore = import("firebase/firestore").then((m) => ({
+      db: m.getFirestore(app, firebaseConfig.firestoreDatabaseId),
+      doc: m.doc,
+      getDoc: m.getDoc,
+      getDocFromServer: m.getDocFromServer,
+      setDoc: m.setDoc,
+    }));
+  }
+  return firestore;
+}
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
@@ -72,10 +93,17 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Test connection on boot as mandated
+/**
+ * Reachability probe for Firestore. Deliberately NOT run at module scope any
+ * more: doing so pulled the Firestore chunk into every page load purely to log
+ * a warning, which is the cost this lazy split exists to avoid. Nothing ever
+ * consumed its result — it returns true even on a permission error — so it is
+ * now only called if something asks.
+ */
 export async function testConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, "test", "connection"));
+    const fs = await loadFirestore();
+    await fs.getDocFromServer(fs.doc(fs.db, "test", "connection"));
     return true;
   } catch (error) {
     if (error instanceof Error && error.message.includes("the client is offline")) {
@@ -86,9 +114,6 @@ export async function testConnection(): Promise<boolean> {
     return true;
   }
 }
-
-// Run test connection
-void testConnection();
 
 export async function signInWithGoogle(): Promise<FirebaseUser | null> {
   try {
@@ -130,8 +155,9 @@ export async function syncEntryToCloud(
   const entryId = `${date}_${slot}`;
   const path = `users/${targetUid}/entries/${entryId}`;
   try {
-    const docRef = doc(db, "users", targetUid, "entries", entryId);
-    await setDoc(
+    const fs_ = await loadFirestore();
+    const docRef = fs_.doc(fs_.db, "users", targetUid, "entries", entryId);
+    await fs_.setDoc(
       docRef,
       {
         userId: targetUid,
@@ -163,8 +189,9 @@ export async function saveChatMessageToCloud(
   const messageId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const path = `users/${targetUid}/messages/${messageId}`;
   try {
-    const docRef = doc(db, "users", targetUid, "messages", messageId);
-    await setDoc(docRef, {
+    const fs_ = await loadFirestore();
+    const docRef = fs_.doc(fs_.db, "users", targetUid, "messages", messageId);
+    await fs_.setDoc(docRef, {
       userId: targetUid,
       role,
       content,
@@ -189,11 +216,12 @@ export async function saveUserProfileToCloud(user: {
   const targetUid = currentFbUser.uid;
   const path = `users/${targetUid}`;
   try {
-    const docRef = doc(db, "users", targetUid);
-    const existing = await getDoc(docRef);
+    const fs_ = await loadFirestore();
+    const docRef = fs_.doc(fs_.db, "users", targetUid);
+    const existing = await fs_.getDoc(docRef);
     const now = new Date().toISOString();
     if (!existing.exists()) {
-      await setDoc(docRef, {
+      await fs_.setDoc(docRef, {
         userId: targetUid,
         email: user.email || currentFbUser.email || "",
         name: user.name || currentFbUser.displayName || "Trader",
@@ -202,7 +230,7 @@ export async function saveUserProfileToCloud(user: {
         updatedAt: now,
       });
     } else {
-      await setDoc(
+      await fs_.setDoc(
         docRef,
         {
           name: user.name || currentFbUser.displayName || "Trader",
