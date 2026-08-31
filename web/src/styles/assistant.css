@@ -3,64 +3,133 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  background: var(--chrome);
+  background: var(--bg);
 }
 
 .assistant-head {
-  padding: 18px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   flex: none;
 }
+.assistant-head-title {
+  font: 500 13px/1 var(--thai);
+  color: var(--ink);
+}
 
+/* ---- Thread ------------------------------------------------------------- */
+/* Claude-style: one centred reading column, assistant text sits bare on the
+   page, only the user's turn gets a soft bubble. */
 .assistant-log {
   flex: 1;
-  padding: 18px 20px;
+  padding: 32px 24px 40px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 28px;
   min-height: 0;
   overflow: auto;
 }
+.assistant-log > * {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
 
-.bubble {
-  max-width: 90%;
-  padding: 13px 14px;
-  border-radius: 12px 12px 12px 4px;
+.turn {
+  display: flex;
+  flex-direction: column;
+}
+.turn.user {
+  align-items: flex-end;
+}
+.turn.ai {
+  flex-direction: row;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.turn-glyph {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 5px;
+  opacity: 0.9;
+}
+
+.turn-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.turn-body > :first-child {
+  margin-top: 0;
+}
+.turn-body > :last-child {
+  margin-bottom: 0;
+}
+.turn-body p {
+  margin: 0;
+  font: 400 15px/1.75 var(--thai);
+  color: var(--ink);
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.turn-body h3,
+.turn-body h4,
+.turn-body h5,
+.turn-body h6 {
+  margin: 4px 0 -2px;
+  font: 600 15px/1.6 var(--thai);
+  color: var(--ink);
+}
+.turn-body ul,
+.turn-body ol {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.turn-body li {
+  font: 400 15px/1.7 var(--thai);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.turn-body strong {
+  font-weight: 600;
+}
+.turn-body em {
+  font-style: italic;
+}
+.turn-body code {
+  font: 400 13px/1.5 var(--mono);
   background: var(--fill-2);
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.bubble.user {
+  max-width: 100%;
+  padding: 11px 16px;
+  border-radius: 16px;
+  background: var(--fill-2);
+  border: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
-.bubble p {
+.bubble.user p {
   margin: 0;
-  font: 300 13px/1.8 var(--thai);
-  color: var(--t-80);
+  font: 400 15px/1.7 var(--thai);
+  color: var(--ink);
   text-wrap: pretty;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-.bubble.user {
-  align-self: flex-end;
-  max-width: 82%;
-  border-radius: 12px 12px 4px 12px;
-  background: var(--line-2);
-  border-color: transparent;
-  padding: 12px 14px;
-}
-.bubble.user p {
-  color: var(--t-80);
-  line-height: 1.75;
-}
-.bubble.ai {
-  background: var(--gold-fill);
-  border-color: var(--gold-fill-2);
-}
-.bubble.ai p {
-  color: var(--t-80);
 }
 
 .bubble-actions {
@@ -71,7 +140,7 @@
 
 .chip {
   padding: 6px 11px;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid var(--line-3);
   background: transparent;
   font: 400 11.5px/1.4 var(--thai);
@@ -95,13 +164,33 @@
   white-space: normal;
 }
 
+/* ---- Working indicator ------------------------------------------------- */
 .assistant-activity {
   display: flex;
   align-items: center;
   gap: 9px;
-  font: 300 12px/1 var(--thai);
-  color: var(--t-45);
-  padding-left: 2px;
+  font: 400 13.5px/1 var(--thai);
+  color: var(--t-55);
+  padding-left: 29px;
+}
+.assistant-activity .spin {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gold);
+  animation: assistant-pulse 1s ease-in-out infinite;
+}
+@keyframes assistant-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .assistant-timer {
   font: 400 10.5px/1 var(--mono);
@@ -113,12 +202,12 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 .bubble-shot {
   padding: 0;
   border: 1px solid var(--line-2);
-  border-radius: 7px;
+  border-radius: 8px;
   overflow: hidden;
   cursor: zoom-in;
   background: none;
@@ -131,12 +220,44 @@
   display: block;
 }
 
-/* Model / duration / token line under an assistant reply. */
+/* Model / duration / token line — kept, but tucked away until you hover the
+   turn, the way Claude keeps its chrome out of the reading flow. */
 .assistant-stats {
-  margin-top: 8px;
+  margin-top: 2px;
   font: 400 10px/1.5 var(--mono);
   color: var(--t-30);
   word-break: break-word;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.turn.ai:hover .assistant-stats {
+  opacity: 1;
+}
+
+/* ---- Empty state --------------------------------------------------------- */
+.assistant-welcome {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 12px;
+  text-align: center;
+}
+.assistant-welcome .diamond {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 2px;
+}
+.assistant-welcome h2 {
+  margin: 0;
+  font: 500 20px/1.4 var(--thai);
+  color: var(--ink);
+}
+.assistant-welcome p {
+  margin: 0;
+  font: 400 13px/1.5 var(--thai);
+  color: var(--t-45);
 }
 
 .assistant-lightbox {
@@ -192,83 +313,129 @@
   font-size: 11px;
 }
 
+/* ---- Composer -------------------------------------------------------- */
 .assistant-compose {
-  padding: 14px 18px 18px;
-  border-top: 1px solid var(--line);
+  padding: 10px 24px 22px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex: none;
+}
+.assistant-compose > * {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .assistant-suggestions {
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 .assistant-suggestions .chip {
   border-radius: 20px;
-  padding: 6px 10px;
-  font-weight: 300;
-  font-size: 11px;
+  padding: 6px 12px;
+  font-weight: 400;
+  font-size: 11.5px;
 }
 
 .assistant-input {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--fill-2);
+  padding: 5px 8px;
+  border-radius: 26px;
+  background: var(--chrome);
   border: 1px solid var(--line-2);
+  box-shadow: 0 1px 2px rgba(25, 22, 16, 0.04), 0 10px 28px rgba(25, 22, 16, 0.06);
+  transition: border-color 0.15s;
 }
-.assistant-input input {
+.assistant-input:focus-within {
+  border-color: var(--gold-line);
+}
+
+/* One inline row: [ + ] [ textarea ] [ send ] — collapses to a single pill when
+   empty, grows downward (buttons stay pinned to the bottom) as text wraps. */
+.assistant-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.assistant-input textarea {
   flex: 1;
   border: none;
   background: none;
   outline: none;
-  font: 300 12.5px/1.4 var(--thai);
+  resize: none;
+  font: 400 14.5px/1.6 var(--thai);
   color: var(--ink);
   min-width: 0;
-  padding: 2px 0;
+  max-height: 200px;
+  padding: 6px 4px;
+  overflow-y: auto;
 }
-.assistant-input input::placeholder {
+.assistant-input textarea::placeholder {
   color: var(--t-40);
 }
-.assistant-input button {
-  width: 26px;
-  height: 26px;
+.assistant-input-row button {
   border: none;
-  border-radius: 7px;
-  background: var(--gold);
-  color: var(--gold-ink);
-  font: 400 12px/1 var(--mono);
   cursor: pointer;
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
-.assistant-input button:disabled {
-  opacity: 0.4;
+.assistant-input-row button:disabled {
   cursor: not-allowed;
 }
-
-/* The attach control sits beside the send button but must not compete with it. */
-.assistant-input button.assistant-attach {
+/* Attach + send: both bare icon buttons sitting on the composer floor. */
+.assistant-attach,
+.assistant-send {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: none;
-  border: 1px solid var(--line-2);
-  color: var(--t-40);
-  font-size: 13px;
+  color: var(--t-45);
+  transition: color 0.15s, background 0.15s;
+}
+.assistant-attach:hover:not(:disabled),
+.assistant-send:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--fill-2);
+}
+.assistant-attach:disabled,
+.assistant-send:disabled {
+  color: var(--t-30);
+}
+.assistant-send:not(:disabled) {
+  color: var(--gold);
+}
+
+/* Disclaimer / model line under the composer. */
+.assistant-disclaimer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 6px 0;
+  font: 400 11px/1.4 var(--thai);
+  color: var(--t-35);
+}
+.assistant-disclaimer .assistant-model {
+  color: var(--t-55);
+  white-space: nowrap;
 }
 
 .assistant-attachments {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  padding: 4px 2px 8px;
 }
 .assistant-thumb {
   position: relative;
-  width: 54px;
-  height: 54px;
-  border-radius: 8px;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--line-2);
   background: var(--fill-2);
@@ -319,26 +486,13 @@
 .assistant-page > .assistant {
   flex: 1;
   min-width: 0;
-  max-width: 880px;
-  border-left: 1px solid var(--line);
-  border-right: 1px solid var(--line);
-}
-.assistant-page .bubble {
-  max-width: 68%;
-}
-.assistant-page .bubble.user {
-  max-width: 62%;
 }
 
-@media (max-width: 900px) {
-  .assistant-page > .assistant {
-    border-left: none;
-    border-right: none;
+@media (max-width: 760px) {
+  .assistant-log {
+    padding: 24px 16px 32px;
   }
-  .assistant-page .bubble {
-    max-width: 90%;
-  }
-  .assistant-page .bubble.user {
-    max-width: 84%;
+  .assistant-compose {
+    padding: 10px 16px 18px;
   }
 }

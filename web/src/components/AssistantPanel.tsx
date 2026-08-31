@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, chatImageUrl, streamChat } from "../lib/api.ts";
+import Markdown from "./Markdown.tsx";
 import { useSession } from "../lib/session.tsx";
 import { useToast } from "../lib/toast.tsx";
 import { saveChatMessageToCloud } from "../lib/firebase.ts";
@@ -30,6 +31,42 @@ function StatsLine({ stats }: { stats: ChatStats }) {
 }
 
 const SUGGESTIONS = ["สรุปทั้งวัน", "หาวันที่คล้ายกัน", "ตั้งสมมติฐาน"];
+
+const PlusIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M9 10L4 15l5 5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M4 15h11a5 5 0 0 0 5-5V4"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/** "z-ai/glm-5.3-flash" -> "GLM 5.3 Flash" · "gemini-3.6-flash" -> "Gemini 3.6 Flash" */
+function prettyModel(model: string): string {
+  const tail = model.split("/").pop() ?? model;
+  return tail
+    .split(/[-_]/)
+    .map((w) =>
+      /^[a-z]{2,3}$/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1),
+    )
+    .join(" ");
+}
 
 const TOOL_LABELS: Record<string, string> = {
   get_day: "กำลังอ่านบันทึกของวัน…",
@@ -67,7 +104,7 @@ export default function AssistantPanel({
   initialQuestion,
 }: Props) {
   const toast = useToast();
-  const { user } = useSession();
+  const { user, config } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -98,7 +135,16 @@ export default function AssistantPanel({
   }, [lightbox, stepLightbox]);
   const scroller = useRef<HTMLDivElement>(null);
   const filePicker = useRef<HTMLInputElement>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null);
   const sentInitial = useRef(false);
+
+  // Auto-grow the composer like Claude's, capped so it never eats the thread.
+  useEffect(() => {
+    const el = textarea.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [draft]);
 
   // A ticking "…12.3 วิ" while the model works, so a slow reply doesn't look hung.
   useEffect(() => {
@@ -251,18 +297,16 @@ export default function AssistantPanel({
   return (
     <div className="assistant">
       <header className="assistant-head">
-        <span className="diamond" style={{ width: 15, height: 15 }} />
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
-          <span style={{ font: "500 13px/1 var(--thai)", color: "var(--ink)" }}>ผู้ช่วยวิจัย</span>
-          <span style={{ font: "300 10.5px/1.3 var(--thai)", color: "var(--t-40)" }}>
-            {subtitle ?? "อ่านภาพ · จดโน้ต · ตอบจากข้อมูลเก่า"}
-          </span>
-        </div>
+        <span className="diamond" style={{ width: 13, height: 13 }} />
+        <span className="assistant-head-title" title={subtitle}>
+          ผู้ช่วยวิจัย
+        </span>
         {slot ? (
           <span className="mono" style={{ fontSize: 10, color: "var(--t-30)" }}>
             {slotDef(slot).th}
           </span>
         ) : null}
+        <span style={{ flex: 1 }} />
         <button
           className="linkish"
           title="ล้างประวัติแชท"
@@ -277,8 +321,10 @@ export default function AssistantPanel({
 
       <div className="assistant-log" ref={scroller}>
         {messages.length === 0 && !streaming ? (
-          <div className="empty" style={{ padding: "28px 12px" }}>
-            ถามได้เลย เช่น “อ่านภาพ OI ที่เพิ่งอัปโหลด แล้วจดสรุปให้ด้วย”
+          <div className="assistant-welcome">
+            <span className="diamond" aria-hidden="true" />
+            <h2>วันนี้อยากให้ช่วยอะไรครับ</h2>
+            <p>แนบภาพ OI ได้เลย หรือถามจากบันทึกเก่าก็ได้</p>
           </div>
         ) : null}
 
@@ -287,44 +333,52 @@ export default function AssistantPanel({
             .map((a) => a.url ?? (a.id ? chatImageUrl(a.id) : null))
             .filter((u): u is string => Boolean(u));
           return message.role === "user" ? (
-            <div key={message.id} className="bubble user">
-              {shots.length ? (
-                <div className="bubble-shots">
-                  {shots.map((url, i) => (
-                    <button
-                      key={url}
-                      type="button"
-                      className="bubble-shot"
-                      onClick={() => openLightbox(shots, i)}
-                      aria-label="ดูรูปเต็ม"
-                    >
-                      <img src={url} alt="ภาพที่แนบ" />
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {message.content ? <p>{message.content}</p> : null}
+            <div key={message.id} className="turn user">
+              <div className="bubble user">
+                {shots.length ? (
+                  <div className="bubble-shots">
+                    {shots.map((url, i) => (
+                      <button
+                        key={url}
+                        type="button"
+                        className="bubble-shot"
+                        onClick={() => openLightbox(shots, i)}
+                        aria-label="ดูรูปเต็ม"
+                      >
+                        <img src={url} alt="ภาพที่แนบ" />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {message.content ? <p>{message.content}</p> : null}
+              </div>
             </div>
           ) : (
-            <div key={message.id} className="bubble ai">
-              <p>{message.content}</p>
-              {message.meta?.savedNotes?.length ? (
-                <div className="bubble-actions">
-                  {message.meta.savedNotes.map((note) => (
-                    <span key={`${note.date}-${note.slot}`} className="chip gold">
-                      บันทึกลงโน้ต {note.date} · {slotDef(note.slot).th}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              {message.meta?.stats ? <StatsLine stats={message.meta.stats} /> : null}
+            <div key={message.id} className="turn ai">
+              <span className="turn-glyph diamond" aria-hidden="true" />
+              <div className="turn-body">
+                <Markdown text={message.content} />
+                {message.meta?.savedNotes?.length ? (
+                  <div className="bubble-actions">
+                    {message.meta.savedNotes.map((note) => (
+                      <span key={`${note.date}-${note.slot}`} className="chip gold">
+                        บันทึกลงโน้ต {note.date} · {slotDef(note.slot).th}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {message.meta?.stats ? <StatsLine stats={message.meta.stats} /> : null}
+              </div>
             </div>
           );
         })}
 
         {partial ? (
-          <div className="bubble ai">
-            <p>{partial}</p>
+          <div className="turn ai">
+            <span className="turn-glyph diamond" aria-hidden="true" />
+            <div className="turn-body">
+              <Markdown text={partial} />
+            </div>
           </div>
         ) : null}
 
@@ -345,35 +399,17 @@ export default function AssistantPanel({
       </div>
 
       <footer className="assistant-compose">
-        <div className="assistant-suggestions">
-          {SUGGESTIONS.map((text) => (
-            <button key={text} className="chip" disabled={streaming} onClick={() => void send(text)}>
-              {text}
-            </button>
-          ))}
-        </div>
-        {previews.length ? (
-          <div className="assistant-attachments">
-            {previews.map((preview, i) => (
-              <div key={preview.url} className="assistant-thumb">
-                <button
-                  type="button"
-                  className="assistant-thumb-view"
-                  aria-label={`ดูภาพลำดับที่ ${i + 1} เต็ม`}
-                  onClick={() => openLightbox(previews.map((p) => p.url), i)}
-                >
-                  <img src={preview.url} alt={`ภาพแนบลำดับที่ ${i + 1}`} />
-                </button>
-                <button
-                  type="button"
-                  className="assistant-thumb-remove"
-                  aria-label={`เอาภาพลำดับที่ ${i + 1} ออก`}
-                  disabled={streaming}
-                  onClick={() => setAttachments((current) => current.filter((_, n) => n !== i))}
-                >
-                  ×
-                </button>
-              </div>
+        {messages.length === 0 && !streaming ? (
+          <div className="assistant-suggestions">
+            {SUGGESTIONS.map((text) => (
+              <button
+                key={text}
+                className="chip"
+                disabled={streaming}
+                onClick={() => void send(text)}
+              >
+                {text}
+              </button>
             ))}
           </div>
         ) : null}
@@ -395,37 +431,80 @@ export default function AssistantPanel({
               event.target.value = "";
             }}
           />
-          <button
-            type="button"
-            className="assistant-attach"
-            title="แนบภาพ (วางจากคลิปบอร์ดได้)"
-            aria-label="แนบภาพ"
-            disabled={streaming || attachments.length >= MAX_ATTACHMENTS}
-            onClick={() => filePicker.current?.click()}
-          >
-            ⊕
-          </button>
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onPaste={(event) => {
-              const files = Array.from(event.clipboardData.files);
-              if (files.length) {
-                event.preventDefault();
-                addFiles(files);
-              }
-            }}
-            placeholder={attachments.length ? "บอกเพิ่มได้ หรือกดส่งเลย" : "พิมพ์เพื่อให้ AI ช่วยจด"}
-            disabled={streaming}
-          />
-          <button
-            type="submit"
-            disabled={streaming || (!draft.trim() && attachments.length === 0)}
-            aria-label="ส่ง"
-          >
-            ↑
-          </button>
+          {previews.length ? (
+            <div className="assistant-attachments">
+              {previews.map((preview, i) => (
+                <div key={preview.url} className="assistant-thumb">
+                  <button
+                    type="button"
+                    className="assistant-thumb-view"
+                    aria-label={`ดูภาพลำดับที่ ${i + 1} เต็ม`}
+                    onClick={() => openLightbox(previews.map((p) => p.url), i)}
+                  >
+                    <img src={preview.url} alt={`ภาพแนบลำดับที่ ${i + 1}`} />
+                  </button>
+                  <button
+                    type="button"
+                    className="assistant-thumb-remove"
+                    aria-label={`เอาภาพลำดับที่ ${i + 1} ออก`}
+                    disabled={streaming}
+                    onClick={() => setAttachments((current) => current.filter((_, n) => n !== i))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="assistant-input-row">
+            <button
+              type="button"
+              className="assistant-attach"
+              title="แนบภาพ (วางจากคลิปบอร์ดได้)"
+              aria-label="แนบภาพ"
+              disabled={streaming || attachments.length >= MAX_ATTACHMENTS}
+              onClick={() => filePicker.current?.click()}
+            >
+              <PlusIcon />
+            </button>
+            <textarea
+              ref={textarea}
+              rows={1}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void send(draft);
+                }
+              }}
+              onPaste={(event) => {
+                const files = Array.from(event.clipboardData.files);
+                if (files.length) {
+                  event.preventDefault();
+                  addFiles(files);
+                }
+              }}
+              placeholder={attachments.length ? "บอกเพิ่มได้ หรือกดส่งเลย" : "เขียนข้อความ…"}
+              disabled={streaming}
+            />
+            <button
+              type="submit"
+              className="assistant-send"
+              disabled={streaming || (!draft.trim() && attachments.length === 0)}
+              aria-label="ส่ง"
+            >
+              <SendIcon />
+            </button>
+          </div>
         </form>
+
+        <div className="assistant-disclaimer">
+          <span>ผู้ช่วยเป็น AI อาจตอบพลาดได้ ตรวจสอบข้อมูลสำคัญอีกครั้ง</span>
+          {config?.aiModel ? (
+            <span className="assistant-model">{prettyModel(config.aiModel.model)}</span>
+          ) : null}
+        </div>
       </footer>
 
       {lightbox ? (
