@@ -9,32 +9,47 @@ const ExtractionSchema = z.object({
   price_close: z
     .number()
     .nullable()
-    .describe("Last traded / closing price of the contract visible in the intraday chart"),
-  call_oi: z.number().nullable().describe("Total call-side open interest across strikes"),
-  put_oi: z.number().nullable().describe("Total put-side open interest across strikes"),
+    .describe("Intraday header: the contract price shown after 'vs'"),
+  intraday_put: z.number().nullable().describe("Intraday header: the number after 'Put:'"),
+  intraday_call: z.number().nullable().describe("Intraday header: the number after 'Call:'"),
+  vol: z.number().nullable().describe("Intraday header: the number after 'Vol:' (a volatility level, e.g. 28.69)"),
+  volume_change: z.number().nullable().describe("Intraday header: the number after 'Vol Chg:', can be negative"),
+  future_change: z.number().nullable().describe("Intraday header: the number after 'Future Chg:', can be negative"),
+  call_oi: z.number().nullable().describe("OI image: total call-side open interest across strikes"),
+  put_oi: z.number().nullable().describe("OI image: total put-side open interest across strikes"),
+  pc_ratio: z.number().nullable().describe("OI image: put/call open-interest ratio, two decimals"),
+  call_oi_chg: z
+    .number()
+    .nullable()
+    .describe("OI Chg image: net change in call-side open interest, negative if it fell"),
+  put_oi_chg: z
+    .number()
+    .nullable()
+    .describe("OI Chg image: net change in put-side open interest, negative if it fell"),
   oi_chg_total: z
     .number()
     .nullable()
-    .describe("Net change in total open interest for the session, negative if it fell"),
-  pc_ratio: z.number().nullable().describe("Put/call open-interest ratio, rounded to two decimals"),
+    .describe("OI Chg image: net change in total open interest for the session, negative if it fell"),
   summary: z
     .string()
-    .describe("Two or three sentences in Thai describing what the screenshots show"),
+    .describe(
+      "Detailed Thai summary citing the per-image totals actually read (Intraday, OI, OI Chg), plus what stands out",
+    ),
   confidence: z.enum(["high", "medium", "low"]).describe("How legible the numbers were"),
 });
 
 const SYSTEM = `คุณเป็นผู้ช่วยวิจัยที่อ่านภาพหน้าจอตลาดออปชันทองคำ COMEX (GC) แล้วถอดตัวเลขออกมา
 
-ภาพที่ได้รับมีได้ถึงสามชนิดต่อหนึ่งช่วงเวลา:
-- Intraday — กราฟราคาระหว่างวันของสัญญาฟิวเจอร์ส
-- OI — ตาราง/กราฟ Open Interest แยกฝั่ง Call และ Put ตามราคาใช้สิทธิ
-- OI Chg — การเปลี่ยนแปลงของ Open Interest เทียบกับรอบก่อน
+ภาพที่ได้รับมีได้ถึงสามชนิดต่อหนึ่งช่วงเวลา ถอดตัวเลขให้ครบทุกภาพที่ได้รับ:
+- Intraday — กราฟ Intraday Volume หัวกราฟมีบรรทัด "Put: ... Call: ... Vol: ... Vol Chg: ... Future Chg: ..." และมีราคาสัญญาหลังคำว่า "vs" อ่านทุกตัว
+- OI — ตาราง/กราฟ Open Interest แยกฝั่ง Call และ Put อ่าน: ยอดรวม Call OI, ยอดรวม Put OI, P/C ratio
+- OI Chg — การเปลี่ยนแปลงของ Open Interest เทียบกับรอบก่อน อ่าน: ยอดรวมการเปลี่ยนแปลงฝั่ง Call, ฝั่ง Put, และผลรวมสุทธิ
 
 กติกา:
 - อ่านเฉพาะตัวเลขที่เห็นจริงในภาพ ถ้าอ่านไม่ได้หรือไม่มีภาพชนิดนั้นให้ตอบ null อย่าเดา
 - ผลรวม OI ให้รวมทุกราคาใช้สิทธิที่ปรากฏ ถ้าภาพแสดงยอดรวมอยู่แล้วให้ใช้ยอดนั้น
 - P/C ratio = Put OI ÷ Call OI คำนวณจากตัวเลขที่อ่านได้ ถ้าอ่านได้ไม่ครบให้ตอบ null
-- สรุป (summary) เขียนเป็นภาษาไทย กระชับ อ้างอิงเฉพาะสิ่งที่เห็นในภาพ`;
+- สรุป (summary) เขียนเป็นภาษาไทยแบบละเอียด อ้างตัวเลขยอดรวมของแต่ละภาพที่อ่านได้ ไม่ใช่แค่ OI`;
 
 export type ExtractionResult = {
   metrics: Metrics;
@@ -96,34 +111,21 @@ export async function extractSlotMetrics(
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            price_close: {
-              type: Type.NUMBER,
-              description: "Last traded / closing price of the contract visible in the intraday chart",
-              nullable: true,
-            },
-            call_oi: {
-              type: Type.NUMBER,
-              description: "Total call-side open interest across strikes",
-              nullable: true,
-            },
-            put_oi: {
-              type: Type.NUMBER,
-              description: "Total put-side open interest across strikes",
-              nullable: true,
-            },
-            oi_chg_total: {
-              type: Type.NUMBER,
-              description: "Net change in total open interest for the session, negative if it fell",
-              nullable: true,
-            },
-            pc_ratio: {
-              type: Type.NUMBER,
-              description: "Put/call open-interest ratio, rounded to two decimals",
-              nullable: true,
-            },
+            price_close: { type: Type.NUMBER, description: "Intraday header: price after 'vs'", nullable: true },
+            intraday_put: { type: Type.NUMBER, description: "Intraday header: number after 'Put:'", nullable: true },
+            intraday_call: { type: Type.NUMBER, description: "Intraday header: number after 'Call:'", nullable: true },
+            vol: { type: Type.NUMBER, description: "Intraday header: number after 'Vol:'", nullable: true },
+            volume_change: { type: Type.NUMBER, description: "Intraday header: number after 'Vol Chg:'", nullable: true },
+            future_change: { type: Type.NUMBER, description: "Intraday header: number after 'Future Chg:'", nullable: true },
+            call_oi: { type: Type.NUMBER, description: "OI: total call-side OI across strikes", nullable: true },
+            put_oi: { type: Type.NUMBER, description: "OI: total put-side OI across strikes", nullable: true },
+            pc_ratio: { type: Type.NUMBER, description: "OI: put/call ratio, two decimals", nullable: true },
+            call_oi_chg: { type: Type.NUMBER, description: "OI Chg: net call-side OI change", nullable: true },
+            put_oi_chg: { type: Type.NUMBER, description: "OI Chg: net put-side OI change", nullable: true },
+            oi_chg_total: { type: Type.NUMBER, description: "OI Chg: net total OI change", nullable: true },
             summary: {
               type: Type.STRING,
-              description: "Two or three sentences in Thai describing what the screenshots show",
+              description: "Detailed Thai summary citing the per-image totals actually read",
             },
             confidence: {
               type: Type.STRING,
@@ -140,10 +142,17 @@ export async function extractSlotMetrics(
     return {
       metrics: {
         priceClose: parsed.price_close ?? null,
+        intradayPut: parsed.intraday_put ?? null,
+        intradayCall: parsed.intraday_call ?? null,
+        vol: parsed.vol ?? null,
+        volChg: parsed.volume_change ?? null,
+        futureChg: parsed.future_change ?? null,
         callOi: parsed.call_oi ?? null,
         putOi: parsed.put_oi ?? null,
-        oiChgTotal: parsed.oi_chg_total ?? null,
         pcRatio: parsed.pc_ratio ?? null,
+        callOiChg: parsed.call_oi_chg ?? null,
+        putOiChg: parsed.put_oi_chg ?? null,
+        oiChgTotal: parsed.oi_chg_total ?? null,
         summary: parsed.summary ?? "",
         extractedAt: new Date().toISOString(),
         extractedFrom: present,
@@ -186,10 +195,17 @@ export async function extractSlotMetrics(
   return {
     metrics: {
       priceClose: parsed.price_close,
+      intradayPut: parsed.intraday_put,
+      intradayCall: parsed.intraday_call,
+      vol: parsed.vol,
+      volChg: parsed.volume_change,
+      futureChg: parsed.future_change,
       callOi: parsed.call_oi,
       putOi: parsed.put_oi,
-      oiChgTotal: parsed.oi_chg_total,
       pcRatio: parsed.pc_ratio,
+      callOiChg: parsed.call_oi_chg,
+      putOiChg: parsed.put_oi_chg,
+      oiChgTotal: parsed.oi_chg_total,
       summary: parsed.summary,
       extractedAt: new Date().toISOString(),
       extractedFrom: present,

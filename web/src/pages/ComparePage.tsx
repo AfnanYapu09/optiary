@@ -220,34 +220,27 @@ export default function ComparePage() {
   const setMode = (next: Mode) => setParams({ mode: next, kind }, { replace: true });
   const setKind = (next: ImageKind) => setParams({ mode, kind: next }, { replace: true });
 
-  const deltaStats = diff
-    ? [
-        {
-          k: "ราคาปิดช่วง",
-          v: `${num(diff.left.metrics.priceClose, 1)} → ${num(diff.right.metrics.priceClose, 1)}`,
-          sub: signed(diff.deltas.priceClose, 1),
-          color: "var(--ink)",
-        },
-        {
-          k: "CALL OI",
-          v: `${num(diff.left.metrics.callOi)} → ${num(diff.right.metrics.callOi)}`,
-          sub: signed(diff.deltas.callOi),
-          color: (diff.deltas.callOi ?? 0) >= 0 ? "var(--green)" : "var(--red)",
-        },
-        {
-          k: "PUT OI",
-          v: `${num(diff.left.metrics.putOi)} → ${num(diff.right.metrics.putOi)}`,
-          sub: signed(diff.deltas.putOi),
-          color: (diff.deltas.putOi ?? 0) >= 0 ? "var(--green)" : "var(--red)",
-        },
-        {
-          k: "P/C RATIO",
-          v: `${num(diff.left.metrics.pcRatio, 2)} → ${num(diff.right.metrics.pcRatio, 2)}`,
-          sub: signed(diff.deltas.pcRatio, 2),
-          color: "var(--gold)",
-        },
-      ]
-    : [];
+  const deltaStats = (() => {
+    if (!diff) return [] as Array<{ k: string; v: string; sub: string; color: string }>;
+    const L = diff.left.metrics;
+    const R = diff.right.metrics;
+    const chg = (d: number | null | undefined) => ((d ?? 0) >= 0 ? "var(--green)" : "var(--red)");
+    const rows = [
+      { k: "ราคาปิดช่วง", v: `${num(L.priceClose, 1)} → ${num(R.priceClose, 1)}`, sub: signed(diff.deltas.priceClose, 1), color: "var(--ink)", core: true, has: L.priceClose != null || R.priceClose != null },
+      { k: "INTRADAY PUT", v: `${num(L.intradayPut)} → ${num(R.intradayPut)}`, sub: signed(diff.deltas.intradayPut), color: chg(diff.deltas.intradayPut), core: false, has: L.intradayPut != null || R.intradayPut != null },
+      { k: "INTRADAY CALL", v: `${num(L.intradayCall)} → ${num(R.intradayCall)}`, sub: signed(diff.deltas.intradayCall), color: chg(diff.deltas.intradayCall), core: false, has: L.intradayCall != null || R.intradayCall != null },
+      { k: "VOL", v: `${num(L.vol, 2)} → ${num(R.vol, 2)}`, sub: signed(diff.deltas.vol, 2), color: "var(--ink)", core: false, has: L.vol != null || R.vol != null },
+      { k: "VOL CHG", v: `${signed(L.volChg, 2)} → ${signed(R.volChg, 2)}`, sub: signed(diff.deltas.volChg, 2), color: chg(diff.deltas.volChg), core: false, has: L.volChg != null || R.volChg != null },
+      { k: "FUTURE CHG", v: `${signed(L.futureChg, 1)} → ${signed(R.futureChg, 1)}`, sub: signed(diff.deltas.futureChg, 1), color: chg(diff.deltas.futureChg), core: false, has: L.futureChg != null || R.futureChg != null },
+      { k: "CALL OI", v: `${num(L.callOi)} → ${num(R.callOi)}`, sub: signed(diff.deltas.callOi), color: chg(diff.deltas.callOi), core: true, has: L.callOi != null || R.callOi != null },
+      { k: "PUT OI", v: `${num(L.putOi)} → ${num(R.putOi)}`, sub: signed(diff.deltas.putOi), color: chg(diff.deltas.putOi), core: true, has: L.putOi != null || R.putOi != null },
+      { k: "P/C RATIO", v: `${num(L.pcRatio, 2)} → ${num(R.pcRatio, 2)}`, sub: signed(diff.deltas.pcRatio, 2), color: "var(--gold)", core: true, has: L.pcRatio != null || R.pcRatio != null },
+      { k: "CALL OI CHG", v: `${signed(L.callOiChg)} → ${signed(R.callOiChg)}`, sub: signed(diff.deltas.callOiChg), color: chg(diff.deltas.callOiChg), core: false, has: L.callOiChg != null || R.callOiChg != null },
+      { k: "PUT OI CHG", v: `${signed(L.putOiChg)} → ${signed(R.putOiChg)}`, sub: signed(diff.deltas.putOiChg), color: chg(diff.deltas.putOiChg), core: false, has: L.putOiChg != null || R.putOiChg != null },
+      { k: "OI CHG รวม", v: `${signed(L.oiChgTotal)} → ${signed(R.oiChgTotal)}`, sub: signed(diff.deltas.oiChgTotal), color: chg(diff.deltas.oiChgTotal), core: false, has: L.oiChgTotal != null || R.oiChgTotal != null },
+    ];
+    return rows.filter((r) => r.core || r.has).map(({ core, has, ...r }) => r);
+  })();
 
   return (
     <div className="compare">
@@ -478,7 +471,7 @@ export default function ComparePage() {
                       {image ? <img src={image.url} alt="" loading="lazy" decoding="async" /> : null}
                       <div className="timeline-overlay">
                         <span style={{ font: "500 12px/1 var(--thai)", color: "var(--ink)" }}>{def.th}</span>
-                        <span className="mono" style={{ fontSize: 9.5, color: "rgba(237,234,228,.7)" }}>
+                        <span className="mono" style={{ fontSize: 9.5, color: "rgba(255,255,255,.75)" }}>
                           {image ? `${def.from}–${def.to}` : "NO DATA"}
                         </span>
                       </div>

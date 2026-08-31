@@ -98,7 +98,7 @@
   position: absolute;
   top: 8px;
   transform: translateX(-50%);
-  background: #1b1f23;
+  background: var(--panel);
   border: 1px solid var(--line-3);
   border-radius: 9px;
   padding: 9px 12px;
@@ -171,7 +171,7 @@
   right: 0;
   bottom: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--line-3);
 }
 .bar-track.diverging::after {
   bottom: auto;
@@ -212,8 +212,8 @@
 
 .chart-insight {
   border-radius: 12px;
-  border: 1px solid rgba(217, 178, 106, 0.2);
-  background: linear-gradient(160deg, rgba(217, 178, 106, 0.1), rgba(217, 178, 106, 0.02));
+  border: 1px solid var(--gold-fill-2);
+  background: var(--gold-fill);
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
@@ -223,7 +223,7 @@
   margin: 0;
   flex: 1;
   font: 300 13px/1.8 var(--thai);
-  color: rgba(237, 234, 228, 0.78);
+  color: var(--t-80);
   text-wrap: pretty;
 }
 

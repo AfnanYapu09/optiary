@@ -11,6 +11,7 @@ import {
   IMAGE_KINDS,
   SLOTS,
   slotDef,
+  type DayNews,
   type DayRecord,
   type EntryRecord,
   type ImageKind,
@@ -18,19 +19,70 @@ import {
 } from "../lib/types.ts";
 import "../styles/capture.css";
 
+/** Day-level economic news — shown under the slots so it's visible from any slot. */
+function NewsPanel({ news }: { news: DayNews }) {
+  if (!news.events.length && !news.weekSummary) return null;
+  return (
+    <div className="news-panel">
+      <span className="eyebrow">ข่าวเศรษฐกิจวันนี้ (แดง / วันหยุด)</span>
+      {news.events.length ? (
+        <div className="news-table">
+          <div className="news-row news-head">
+            <span className="news-time">เวลา</span>
+            <span className="news-cur">สกุล</span>
+            <span className="news-title">ข่าว</span>
+            <span className="news-nums">
+              <b>Actual</b>
+              <i>Fcst</i>
+              <i>Prev</i>
+            </span>
+          </div>
+          {news.events.map((e, i) => (
+            <div key={i} className={`news-row${e.holiday ? " holiday" : ""}`}>
+              <span className="news-time mono">{e.holiday ? "ทั้งวัน" : e.time || "—"}</span>
+              <span className="news-cur mono">{e.currency || ""}</span>
+              <span className="news-title">{e.title}</span>
+              <span className="news-nums mono">
+                {[e.actual, e.forecast, e.previous].some(Boolean) ? (
+                  <>
+                    <b>{e.actual || "–"}</b>
+                    <i>{e.forecast || "–"}</i>
+                    <i>{e.previous || "–"}</i>
+                  </>
+                ) : null}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {news.weekSummary ? (
+        <p className="news-week">
+          <b>🗓️ ข่าวแรงสุดของสัปดาห์:</b> {news.weekSummary}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function metricRows(entry: EntryRecord) {
   const m = entry.metrics;
-  return [
-    { key: "ราคาปิดช่วง", value: num(m.priceClose, 1), color: "var(--ink)" },
-    { key: "Call OI", value: num(m.callOi), color: "var(--green)" },
-    { key: "Put OI", value: num(m.putOi), color: "var(--red)" },
-    {
-      key: "OI Chg รวม",
-      value: signed(m.oiChgTotal),
-      color: (m.oiChgTotal ?? 0) >= 0 ? "var(--green)" : "var(--red)",
-    },
-    { key: "P/C Ratio", value: num(m.pcRatio, 2), color: "var(--ink)" },
+  const chgColor = (v: number | null | undefined) => ((v ?? 0) >= 0 ? "var(--green)" : "var(--red)");
+  const all = [
+    { key: "ราคาปิดช่วง", value: num(m.priceClose, 1), color: "var(--ink)", raw: m.priceClose, core: true },
+    { key: "Intraday Put", value: num(m.intradayPut), color: "var(--green)", raw: m.intradayPut, core: false },
+    { key: "Intraday Call", value: num(m.intradayCall), color: "var(--red)", raw: m.intradayCall, core: false },
+    { key: "Vol", value: num(m.vol, 2), color: "var(--ink)", raw: m.vol, core: false },
+    { key: "Vol Chg", value: signed(m.volChg, 2), color: chgColor(m.volChg), raw: m.volChg, core: false },
+    { key: "Future Chg", value: signed(m.futureChg, 1), color: chgColor(m.futureChg), raw: m.futureChg, core: false },
+    { key: "Call OI", value: num(m.callOi), color: "var(--green)", raw: m.callOi, core: true },
+    { key: "Put OI", value: num(m.putOi), color: "var(--red)", raw: m.putOi, core: true },
+    { key: "P/C Ratio", value: num(m.pcRatio, 2), color: "var(--ink)", raw: m.pcRatio, core: true },
+    { key: "Call OI Chg", value: signed(m.callOiChg), color: chgColor(m.callOiChg), raw: m.callOiChg, core: false },
+    { key: "Put OI Chg", value: signed(m.putOiChg), color: chgColor(m.putOiChg), raw: m.putOiChg, core: false },
+    { key: "OI Chg รวม", value: signed(m.oiChgTotal), color: chgColor(m.oiChgTotal), raw: m.oiChgTotal, core: true },
   ];
+  // Always show the core rows; add the extra ones only once the model has read them.
+  return all.filter((row) => row.core || (row.raw !== null && row.raw !== undefined));
 }
 
 export default function CapturePage() {
@@ -265,8 +317,8 @@ export default function CapturePage() {
                             index < filled
                               ? active
                                 ? "var(--gold)"
-                                : "rgba(217,178,106,.55)"
-                              : "rgba(255,255,255,.09)",
+                                : "var(--gold-line)"
+                              : "var(--line-2)",
                         }}
                       />
                     ))}
@@ -375,13 +427,15 @@ export default function CapturePage() {
               </div>
             </div>
           </div>
+
+          {day ? <NewsPanel news={day.news} /> : null}
         </section>
 
         <aside className="capture-aside">
           <AssistantPanel
             thread={date}
             slot={activeSlot}
-            subtitle="อ่านภาพ · จดโน้ต · ตอบจากข้อมูลเก่า"
+            subtitle="อ่านภาพ · จดโน้ต · ข่าว · ตอบจากข้อมูลเก่า"
             onNoteSaved={(savedDate) => {
               if (savedDate === date) void load();
             }}

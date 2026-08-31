@@ -19,8 +19,8 @@ const FULL_DAY = SLOTS.length * IMAGE_KINDS.length;
 
 function dotColor(count: number): string {
   if (count >= IMAGE_KINDS.length) return "var(--gold)";
-  if (count > 0) return "rgba(217,178,106,.35)";
-  return "rgba(255,255,255,.08)";
+  if (count > 0) return "var(--gold-fill-2)";
+  return "var(--line-2)";
 }
 
 export default function OverviewPage() {
@@ -115,20 +115,41 @@ export default function OverviewPage() {
             const counts = record?.slotCounts ?? SLOTS.map(() => 0);
             const isToday = date === today;
             const future = date > today;
+            const newsCount = record?.newsCount ?? 0;
+            const holidayCount = record?.holidayCount ?? 0;
             return (
               <button
                 key={date}
-                className={`cal-cell${isToday ? " today" : ""}${future ? " future" : ""}`}
+                className={`cal-cell${isToday ? " today" : ""}${future ? " future" : ""}${
+                  newsCount ? " has-news" : holidayCount ? " has-holiday" : ""
+                }`}
                 onClick={() => navigate(`/day/${date}`)}
-                title={`${fullThaiDate(date)} · ${record?.imageCount ?? 0}/${FULL_DAY} ภาพ`}
+                title={
+                  `${fullThaiDate(date)} · ${record?.imageCount ?? 0}/${FULL_DAY} ภาพ` +
+                  (newsCount ? ` · ข่าวแดง ${newsCount}` : "") +
+                  (holidayCount ? ` · วันหยุด ${holidayCount}` : "")
+                }
               >
                 <span className="cal-top">
                   <b>{Number(date.slice(8))}</b>
-                  <em>{record?.imageCount ? `${record.imageCount}` : ""}</em>
+                  {newsCount ? (
+                    <span className="cal-newsdots" aria-label={`ข่าวแดง ${newsCount}`}>
+                      {Array.from({ length: Math.min(newsCount, 5) }).map((_, i) => (
+                        <i key={i} />
+                      ))}
+                      {newsCount > 5 ? <em>+{newsCount - 5}</em> : null}
+                    </span>
+                  ) : holidayCount ? (
+                    <span className="cal-newsdots holiday" aria-label={`วันหยุด ${holidayCount}`}>
+                      <i />
+                    </span>
+                  ) : (
+                    <em>{record?.imageCount ? `${record.imageCount}` : ""}</em>
+                  )}
                 </span>
                 <span className="cal-dots">
                   {counts.map((count, slot) => (
-                    <i key={slot} style={{ background: future ? "rgba(255,255,255,.06)" : dotColor(count) }} />
+                    <i key={slot} style={{ background: future ? "var(--line)" : dotColor(count) }} />
                   ))}
                 </span>
               </button>
@@ -142,12 +163,20 @@ export default function OverviewPage() {
             ครบ 3 ภาพ
           </span>
           <span>
-            <i style={{ background: "rgba(217,178,106,.35)" }} />
+            <i style={{ background: "var(--gold-fill-2)" }} />
             ไม่ครบ
           </span>
           <span>
-            <i style={{ background: "rgba(255,255,255,.08)" }} />
+            <i style={{ background: "var(--line-2)" }} />
             ยังไม่บันทึก
+          </span>
+          <span>
+            <i style={{ background: "var(--red)" }} />
+            มีข่าวแดง
+          </span>
+          <span>
+            <i style={{ background: "var(--t-40)" }} />
+            วันหยุด
           </span>
           <span className="mono" style={{ marginLeft: "auto", color: "var(--t-35)", fontSize: 10.5 }}>
             เดือนนี้เก็บได้ {monthCompletion}%

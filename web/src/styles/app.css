@@ -1,12 +1,52 @@
-/* Design tokens taken directly from the Claude Design handoff (Optiary UI.dc.html). */
+/*
+ * Design tokens. Light is the default theme; `data-theme="dark"` on <html>
+ * swaps to the original dark palette. `data-accent` re-points the accent group.
+ */
 :root {
+  --bg: #f8f7f3;
+  --chrome: #ffffff;
+  --panel: #ffffff;
+  --ink: #23201a;
+  --green: #3c8f66;
+  --red: #c15656;
+  --blue: #3f77b8;
+
+  --line: rgba(25, 22, 16, 0.09);
+  --line-2: rgba(25, 22, 16, 0.13);
+  --line-3: rgba(25, 22, 16, 0.18);
+  --fill: rgba(25, 22, 16, 0.03);
+  --fill-2: rgba(25, 22, 16, 0.055);
+
+  --t-80: rgba(35, 32, 26, 0.8);
+  --t-60: rgba(35, 32, 26, 0.62);
+  --t-55: rgba(35, 32, 26, 0.55);
+  --t-45: rgba(35, 32, 26, 0.46);
+  --t-40: rgba(35, 32, 26, 0.4);
+  --t-35: rgba(35, 32, 26, 0.34);
+  --t-30: rgba(35, 32, 26, 0.28);
+
+  /* Accent — gold by default; overridden by [data-accent]. */
+  --accent-rgb: 154, 108, 31;
+  --gold: rgb(var(--accent-rgb));
+  --gold-hi: #7c5615;
+  --gold-ink: #fff8ea;
+  --gold-fill: rgba(var(--accent-rgb), 0.1);
+  --gold-fill-2: rgba(var(--accent-rgb), 0.16);
+  --gold-line: rgba(var(--accent-rgb), 0.42);
+
+  --thai: "IBM Plex Sans Thai", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --topbar: 60px;
+  --radius: 10px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
   --bg: #0f1113;
   --chrome: #111417;
   --panel: #131619;
   --ink: #edeae4;
-  --gold: #d9b26a;
-  --gold-hi: #eccb8d;
-  --gold-ink: #14110c;
   --green: #7fbf9b;
   --red: #d98080;
   --blue: #6f9fd8;
@@ -16,24 +56,54 @@
   --line-3: rgba(255, 255, 255, 0.12);
   --fill: rgba(255, 255, 255, 0.03);
   --fill-2: rgba(255, 255, 255, 0.05);
-  --gold-fill: rgba(217, 178, 106, 0.1);
-  --gold-fill-2: rgba(217, 178, 106, 0.14);
-  --gold-line: rgba(217, 178, 106, 0.35);
 
+  --t-80: rgba(237, 234, 228, 0.8);
   --t-60: rgba(237, 234, 228, 0.6);
   --t-55: rgba(237, 234, 228, 0.55);
   --t-45: rgba(237, 234, 228, 0.45);
   --t-40: rgba(237, 234, 228, 0.4);
   --t-35: rgba(237, 234, 228, 0.35);
   --t-30: rgba(237, 234, 228, 0.3);
-  --t-80: rgba(237, 234, 228, 0.8);
 
-  --thai: "IBM Plex Sans Thai", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
-
-  --topbar: 60px;
-  --radius: 10px;
+  --gold-hi: #eccb8d;
+  --gold-ink: #14110c;
+  --accent-rgb: 217, 178, 106;
   color-scheme: dark;
+}
+
+/* Accent presets — one RGB triple drives fill/line/text tints in both themes. */
+:root[data-accent="sage"] {
+  --accent-rgb: 74, 120, 92;
+}
+:root[data-accent="sage"] {
+  --gold-hi: #3a6249;
+}
+:root[data-theme="dark"][data-accent="sage"] {
+  --accent-rgb: 138, 190, 156;
+  --gold-hi: #a9d4bb;
+  --gold-ink: #10201a;
+}
+:root[data-accent="slate"] {
+  --accent-rgb: 74, 104, 158;
+}
+:root[data-accent="slate"] {
+  --gold-hi: #3a5480;
+}
+:root[data-theme="dark"][data-accent="slate"] {
+  --accent-rgb: 138, 172, 224;
+  --gold-hi: #b3ccef;
+  --gold-ink: #0e1626;
+}
+:root[data-accent="clay"] {
+  --accent-rgb: 166, 92, 62;
+}
+:root[data-accent="clay"] {
+  --gold-hi: #82492f;
+}
+:root[data-theme="dark"][data-accent="clay"] {
+  --accent-rgb: 214, 150, 122;
+  --gold-hi: #e6b39c;
+  --gold-ink: #24120b;
 }
 
 * {
@@ -76,13 +146,13 @@ select {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--line-3);
   border-radius: 6px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--line-3);
   background-clip: content-box;
 }
 
@@ -210,7 +280,7 @@ select {
 .field {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-2);
   border: 1px solid var(--line-2);
   border-radius: var(--radius);
   font: 300 14px/1 var(--thai);
@@ -218,7 +288,7 @@ select {
   outline: none;
 }
 .field:focus {
-  border-color: rgba(217, 178, 106, 0.6);
+  border-color: var(--gold-line);
 }
 .field::placeholder {
   color: var(--t-40);
@@ -265,7 +335,7 @@ select {
   color: var(--t-35);
   margin-left: 10px;
   padding-left: 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid var(--line-3);
   white-space: nowrap;
 }
 
@@ -274,7 +344,7 @@ select {
   align-items: center;
   gap: 9px;
   padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   width: 280px;
@@ -303,7 +373,7 @@ select {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(140deg, #3a3f45, #22262a);
+  background: var(--fill-2);
   border: 1px solid var(--line-3);
   flex: none;
   object-fit: cover;
@@ -344,16 +414,16 @@ select {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(237, 234, 228, 0.25);
+  background: var(--line-3);
   display: block;
   flex: none;
 }
 .sidenav a:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fill-2);
   color: var(--ink);
 }
 .sidenav a.active {
-  background: rgba(217, 178, 106, 0.12);
+  background: var(--gold-fill);
   color: var(--gold);
   font-weight: 500;
 }
@@ -404,7 +474,7 @@ select {
 .shot {
   border-radius: var(--radius);
   border: 1px solid var(--line-2);
-  background: #fff;
+  background: var(--panel);
   overflow: hidden;
   position: relative;
   display: block;
@@ -424,14 +494,14 @@ select {
   border-radius: 5px;
   background: rgba(10, 11, 12, 0.78);
   font: 400 9.5px/1 var(--mono);
-  color: rgba(237, 234, 228, 0.85);
+  color: var(--t-80);
   letter-spacing: 0.08em;
 }
 
 .dropzone {
   border-radius: var(--radius);
-  border: 1px dashed rgba(217, 178, 106, 0.4);
-  background: rgba(217, 178, 106, 0.04);
+  border: 1px dashed var(--gold-line);
+  background: var(--gold-fill);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -445,14 +515,14 @@ select {
 }
 .dropzone:hover,
 .dropzone.over {
-  background: rgba(217, 178, 106, 0.1);
-  border-color: rgba(217, 178, 106, 0.7);
+  background: var(--gold-fill);
+  border-color: var(--gold-line);
 }
 .dropzone .plus {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid rgba(217, 178, 106, 0.5);
+  border: 1px solid var(--gold-line);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -462,7 +532,7 @@ select {
 }
 .dropzone span {
   font: 300 12px/1.5 var(--thai);
-  color: rgba(217, 178, 106, 0.85);
+  color: var(--gold-line);
 }
 .dropzone small {
   font: 400 9.5px/1.6 var(--mono);
@@ -472,8 +542,8 @@ select {
 .ai-note {
   padding: 16px;
   border-radius: 12px;
-  background: linear-gradient(160deg, rgba(217, 178, 106, 0.13), rgba(217, 178, 106, 0.03));
-  border: 1px solid rgba(217, 178, 106, 0.22);
+  background: var(--gold-fill);
+  border: 1px solid var(--gold-fill-2);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -481,7 +551,7 @@ select {
 .ai-note p {
   margin: 0;
   font: 300 13px/1.75 var(--thai);
-  color: rgba(237, 234, 228, 0.75);
+  color: var(--t-60);
   text-wrap: pretty;
 }
 
@@ -531,7 +601,7 @@ select {
 .toast div {
   padding: 11px 18px;
   border-radius: 10px;
-  background: #1b1f23;
+  background: var(--panel);
   border: 1px solid var(--line-3);
   font: 400 12.5px/1.4 var(--thai);
   color: var(--ink);
@@ -551,7 +621,7 @@ select {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  border: 1.5px solid rgba(217, 178, 106, 0.25);
+  border: 1.5px solid var(--gold-fill-2);
   border-top-color: var(--gold);
   animation: spin 0.8s linear infinite;
   flex: none;
@@ -608,7 +678,7 @@ select {
     color: var(--t-55);
   }
   .mobile-tabs a.active {
-    background: rgba(217, 178, 106, 0.12);
+    background: var(--gold-fill);
     color: var(--gold);
     font-weight: 500;
   }

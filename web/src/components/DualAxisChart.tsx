@@ -78,7 +78,7 @@ export default function DualAxisChart({ series }: { series: SeriesPoint[] }) {
             x2={W}
             y1={PAD.top + (i * (H - PAD.top - PAD.bottom)) / 4}
             y2={PAD.top + (i * (H - PAD.top - PAD.bottom)) / 4}
-            stroke="rgba(255,255,255,.055)"
+            stroke="var(--line)"
             strokeWidth={1}
           />
         ))}
@@ -89,16 +89,16 @@ export default function DualAxisChart({ series }: { series: SeriesPoint[] }) {
             x2={item.x}
             y1={0}
             y2={H - PAD.bottom}
-            stroke="rgba(255,255,255,.06)"
+            stroke="var(--line-2)"
             strokeWidth={1}
           />
         ))}
 
-        <path d={path("oi")} fill="none" stroke="#6f9fd8" strokeWidth={2} strokeDasharray="6 5" strokeLinejoin="round" />
-        <path d={path("price")} fill="none" stroke="#d9b26a" strokeWidth={2.4} strokeLinejoin="round" />
+        <path d={path("oi")} fill="none" stroke="var(--blue)" strokeWidth={2} strokeDasharray="6 5" strokeLinejoin="round" />
+        <path d={path("price")} fill="none" stroke="var(--gold)" strokeWidth={2.4} strokeLinejoin="round" />
 
         {active ? (
-          <line x1={active.x} x2={active.x} y1={0} y2={H - PAD.bottom} stroke="rgba(217,178,106,.5)" strokeWidth={1} />
+          <line x1={active.x} x2={active.x} y1={0} y2={H - PAD.bottom} stroke="var(--gold-line)" strokeWidth={1} />
         ) : null}
 
         {scaled.map((item, index) => (
@@ -125,11 +125,11 @@ export default function DualAxisChart({ series }: { series: SeriesPoint[] }) {
             {shortThaiDate(active.point.date)} · {slotDef(active.point.slot).th}
           </b>
           <span>
-            <i style={{ background: "#d9b26a" }} />
+            <i style={{ background: "var(--gold)" }} />
             ราคา {num(active.point.priceClose, 1)}
           </span>
           <span>
-            <i style={{ background: "#6f9fd8" }} />
+            <i style={{ background: "var(--blue)" }} />
             OI {num(active.point.oi)}
           </span>
           {active.point.pcRatio !== null ? <span>P/C {num(active.point.pcRatio, 2)}</span> : null}

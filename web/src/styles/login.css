@@ -5,7 +5,7 @@
 
 .login-hero {
   flex: 1.25;
-  background: radial-gradient(120% 90% at 12% 8%, rgba(217, 178, 106, 0.1), transparent 60%), #0d0f11;
+  background: radial-gradient(120% 90% at 12% 8%, rgba(217, 178, 106, 0.1), transparent 60%), var(--bg);
   padding: 64px 72px;
   display: flex;
   flex-direction: column;
@@ -58,7 +58,7 @@
   align-items: center;
   gap: 12px;
   font: 300 13.5px/1.5 var(--thai);
-  color: rgba(237, 234, 228, 0.72);
+  color: var(--t-60);
 }
 .login-pitch li i {
   width: 5px;
@@ -134,8 +134,8 @@
   margin: 0;
   padding: 11px 14px;
   border-radius: 9px;
-  border: 1px solid rgba(217, 128, 128, 0.4);
-  background: rgba(217, 128, 128, 0.08);
+  border: 1px solid var(--gold-line);
+  background: var(--fill-2);
   font: 300 12.5px/1.6 var(--thai);
   color: var(--red);
 }
@@ -158,7 +158,7 @@
 .login-or span {
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--line-2);
 }
 .login-or em {
   font: 400 10px/1 var(--mono);
@@ -182,7 +182,7 @@
 .login-terms {
   margin: 0;
   font: 300 11.5px/1.8 var(--thai);
-  color: rgba(237, 234, 228, 0.34);
+  color: var(--t-35);
 }
 
 @media (max-width: 980px) {

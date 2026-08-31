@@ -1,14 +1,35 @@
 import { Router } from "express";
+import multer from "multer";
 import type Anthropic from "@anthropic-ai/sdk";
+import { config } from "../config.js";
 import { requireUser } from "../auth.js";
 import { db, nowIso, uid } from "../db.js";
 import { isDateString, isSlotId } from "../domain.js";
-import { streamChat } from "../ai/chat.js";
+import { streamChat, type ChatAttachment } from "../ai/chat.js";
 import { describeAiError } from "../ai/client.js";
+import { deleteChatAttachment, getChatAttachmentFile, storeChatAttachment } from "../store.js";
 
 export const chatRoutes = Router();
 
-chatRoutes.use(["/chat", "/chat/*"], requireUser);
+chatRoutes.use(["/chat", "/chat/*", "/chat-image/*"], requireUser);
+
+const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+
+/**
+ * Chat turns arrive as JSON when there is nothing attached and as multipart when
+ * the user drops screenshots in, so the same route has to accept both shapes.
+ */
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.maxUploadBytes, files: 3 },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_MIME.has(file.mimetype)) {
+      cb(new Error("รองรับเฉพาะไฟล์ PNG, JPEG, WebP และ GIF"));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 type MessageRow = { id: string; role: string; content: string; meta: string; created_at: string };
 
@@ -43,8 +64,29 @@ chatRoutes.get("/chat/:thread", (req, res) => {
 
 chatRoutes.delete("/chat/:thread", (req, res) => {
   const thread = threadFor(req.params.thread);
-  db.prepare("DELETE FROM messages WHERE user_id = ? AND thread = ?").run(req.user!.id, thread);
+  const userId = req.user!.id;
+  // Chat images live on disk keyed by message, so clear them with the transcript.
+  const ids = db
+    .prepare(
+      `SELECT ca.id AS id FROM chat_attachments ca
+       JOIN messages m ON m.id = ca.message_id
+       WHERE ca.user_id = ? AND m.thread = ?`,
+    )
+    .all(userId, thread) as Array<{ id: string }>;
+  for (const { id } of ids) deleteChatAttachment(userId, id);
+  db.prepare("DELETE FROM messages WHERE user_id = ? AND thread = ?").run(userId, thread);
   res.json({ ok: true });
+});
+
+chatRoutes.get("/chat-image/:id/file", (req, res) => {
+  const file = getChatAttachmentFile(req.user!.id, String(req.params.id ?? ""));
+  if (!file) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  res.setHeader("Content-Type", file.mime);
+  res.setHeader("Cache-Control", "private, max-age=31536000, immutable");
+  res.sendFile(file.absolutePath);
 });
 
 /**
@@ -52,9 +94,12 @@ chatRoutes.delete("/chat/:thread", (req, res) => {
  * persisted immediately; the assistant turn is persisted once the run finishes
  * so a dropped connection never leaves half an answer in the transcript.
  */
-chatRoutes.post("/chat", async (req, res) => {
+chatRoutes.post("/chat", chatUpload.array("files", 3) as any, async (req, res) => {
+  const attachments: ChatAttachment[] = ((req.files as Express.Multer.File[] | undefined) ?? []).map(
+    (f) => ({ buffer: f.buffer, mime: f.mimetype, originalname: f.originalname }),
+  );
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
-  if (!message) {
+  if (!message && attachments.length === 0) {
     res.status(400).json({ error: "ข้อความว่าง" });
     return;
   }
@@ -62,9 +107,27 @@ chatRoutes.post("/chat", async (req, res) => {
   const slot = typeof req.body?.slot === "string" && isSlotId(req.body.slot) ? req.body.slot : undefined;
   const userId = req.user!.id;
 
+  // Only the text goes into `content`; the images are saved as chat attachments
+  // (shown in the transcript) and never replayed into later turns, which is what
+  // keeps a long conversation with screenshots from getting expensive.
+  const userMessageId = uid();
+  const storedContent = attachments.length
+    ? message || "ช่วยอ่านภาพนี้แล้วจดให้หน่อย"
+    : message;
+  const storedAttachments = attachments.map((file) =>
+    storeChatAttachment(userId, userMessageId, file),
+  );
+
   db.prepare(
-    "INSERT INTO messages (id, user_id, thread, role, content, meta, created_at) VALUES (?, ?, ?, 'user', ?, '{}', ?)",
-  ).run(uid(), userId, thread, message, nowIso());
+    "INSERT INTO messages (id, user_id, thread, role, content, meta, created_at) VALUES (?, ?, ?, 'user', ?, ?, ?)",
+  ).run(
+    userMessageId,
+    userId,
+    thread,
+    storedContent,
+    JSON.stringify({ attachments: storedAttachments }),
+    nowIso(),
+  );
 
   const history: Anthropic.MessageParam[] = loadThread(userId, thread).map((m) => ({
     role: m.role === "assistant" ? "assistant" : "user",
@@ -79,16 +142,21 @@ chatRoutes.post("/chat", async (req, res) => {
   const send = (event: unknown) => res.write(`data: ${JSON.stringify(event)}\n\n`);
 
   let answer = "";
+  let stats: unknown = null;
   const savedNotes: Array<{ date: string; slot: string }> = [];
 
   try {
     for await (const event of streamChat(userId, history, {
       date: thread === "global" ? undefined : thread,
       slot,
+      attachments,
     })) {
       if (event.type === "text") answer += event.text;
       if (event.type === "note-saved") savedNotes.push({ date: event.date, slot: event.slot });
-      if (event.type === "done") answer = event.text || answer;
+      if (event.type === "done") {
+        answer = event.text || answer;
+        stats = event.stats;
+      }
       send(event);
     }
   } catch (error) {
@@ -99,9 +167,22 @@ chatRoutes.post("/chat", async (req, res) => {
   if (answer.trim()) {
     db.prepare(
       "INSERT INTO messages (id, user_id, thread, role, content, meta, created_at) VALUES (?, ?, ?, 'assistant', ?, ?, ?)",
-    ).run(uid(), userId, thread, answer, JSON.stringify({ savedNotes }), nowIso());
+    ).run(uid(), userId, thread, answer, JSON.stringify({ savedNotes, stats }), nowIso());
   }
 
   send({ type: "end" });
   res.end();
+});
+
+// Surfaces multer's own failures (file too large, wrong type) as clean JSON.
+chatRoutes.use((err: Error, _req: unknown, res: any, next: (e?: unknown) => void) => {
+  if (err instanceof multer.MulterError) {
+    res.status(413).json({ error: "ไฟล์ใหญ่เกินกำหนด" });
+    return;
+  }
+  if (err?.message?.startsWith("รองรับเฉพาะ")) {
+    res.status(415).json({ error: err.message });
+    return;
+  }
+  next(err);
 });
