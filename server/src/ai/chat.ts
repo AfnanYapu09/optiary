@@ -31,6 +31,89 @@ import {
 import { getUser } from "../auth.js";
 import { db } from "../db.js";
 
+const THAI_WEEKDAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+
+/** Map a Thai/English weekday token (however abbreviated) to 0=Sun..6=Sat, or null. */
+function weekdayIndex(raw: string): number | null {
+  const s = raw.trim().toLowerCase().replace(/[.\s]+$/g, "");
+  const th: Record<string, number> = {
+    "อา": 0, "อาทิตย์": 0,
+    "จ": 1, "จันทร์": 1,
+    "อ": 2, "อังคาร": 2,
+    "พ": 3, "พุธ": 3,
+    "พฤ": 4, "พฤหัส": 4, "พฤหัสบดี": 4,
+    "ศ": 5, "ศุกร์": 5,
+    "ส": 6, "เสาร์": 6,
+  };
+  if (s in th) return th[s];
+  const en = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const hit = en.findIndex((p) => s.startsWith(p));
+  return hit >= 0 ? hit : null;
+}
+
+/**
+ * Resolve the year for a date read off a screenshot. The OS clock / status bar
+ * usually prints only day + month, so we must NOT assume the current year:
+ * pick the most recent past year whose (month, day) is not in the future and —
+ * when the image shows a weekday — falls on that weekday. Buddhist-era years
+ * (>= 2400) are converted to CE.
+ */
+function resolveScreenshotDate(input: {
+  month: number;
+  day: number;
+  weekday?: string;
+  year?: number;
+}): { date: string | null; weekday: string; warning?: string } {
+  const month = Math.trunc(input.month);
+  const day = Math.trunc(input.day);
+  if (!(month >= 1 && month <= 12) || !(day >= 1 && day <= 31)) {
+    return { date: null, weekday: "", warning: "เดือนหรือวันที่ไม่ถูกต้อง" };
+  }
+  const wantDow = input.weekday ? weekdayIndex(input.weekday) : null;
+  const valid = (y: number) => {
+    const d = new Date(y, month - 1, day);
+    return d.getFullYear() === y && d.getMonth() === month - 1 && d.getDate() === day;
+  };
+  const iso = (y: number) =>
+    `${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const dowName = (y: number) => THAI_WEEKDAYS[new Date(y, month - 1, day).getDay()];
+
+  if (input.year) {
+    let y = Math.trunc(input.year);
+    if (y >= 2400) y -= 543; // พ.ศ. -> ค.ศ.
+    if (!valid(y)) return { date: null, weekday: "", warning: `ปี ${y} ไม่มีวันที่นี้` };
+    const w =
+      wantDow !== null && new Date(y, month - 1, day).getDay() !== wantDow
+        ? `ปีในภาพคือ ${y} แต่วันในสัปดาห์ที่อ่านได้ไม่ตรง (${dowName(y)}) — ให้ยืนยันกับผู้ใช้`
+        : undefined;
+    return { date: iso(y), weekday: dowName(y), warning: w };
+  }
+
+  const today = new Date();
+  const thisYear = today.getFullYear();
+  const notFuture = (y: number) => new Date(y, month - 1, day).getTime() <= today.getTime();
+
+  // Most recent non-future year that also matches the weekday, if one was given.
+  for (let y = thisYear; y >= thisYear - 8; y--) {
+    if (!valid(y) || !notFuture(y)) continue;
+    if (wantDow === null || new Date(y, month - 1, day).getDay() === wantDow) {
+      return { date: iso(y), weekday: dowName(y) };
+    }
+  }
+  // Weekday given but nothing lined up — fall back to latest non-future year and flag it.
+  for (let y = thisYear; y >= thisYear - 8; y--) {
+    if (valid(y) && notFuture(y)) {
+      return {
+        date: iso(y),
+        weekday: dowName(y),
+        warning:
+          "วันในสัปดาห์ที่อ่านได้ไม่ตรงกับปีไหนในช่วง 8 ปีล่าสุด — อาจอ่านวัน/เดือนผิด ให้ถามผู้ใช้ยืนยันปี",
+      };
+    }
+  }
+  return { date: null, weekday: "", warning: "หาปีที่เหมาะสมไม่ได้" };
+}
+
 const SYSTEM = `คุณคือ "ผู้ช่วยวิจัย" ของ Optiary — สมุดบันทึกภาพสำหรับงานวิจัย Data Option ของทองคำฟิวเจอร์ส COMEX (GC)
 
 ผู้ใช้เก็บภาพหน้าจอวันละ 5 ช่วง (เช้า 06–11, บ่าย 11–15, เย็น 15–19, ค่ำ 19–23, ดึก 23–03) ช่วงละ 3 ภาพ (Intraday, OI, OI Chg) พร้อมโน้ตและตัวเลขที่ถอดจากภาพ
@@ -69,16 +152,21 @@ ${SLOTS.map((s) => `- ${s.id} (${s.th}) ${s.from}–${s.to}`).join("\n")}
 5. ตอบผู้ใช้: สรุปว่าจดข่าวแดง/วันหยุดลงวันไหนบ้าง กี่ข่าว และย้ำว่าข่าวไหนแรงสุดของสัปดาห์
 
 ขั้นตอนภาพเทรด:
-1. อ่านวันที่และเวลาที่ปรากฏ "ในภาพ" — บนแกน X ของกราฟ, มุมจอ, แถบสถานะ, หรือหัวตาราง ใช้เวลานั้นเทียบตารางด้านบนเพื่อหา slot อย่าใช้เวลาปัจจุบันของระบบมาเดา
-2. ถ้าอ่านวันหรือเวลาจากในภาพไม่ออก หรือไม่แน่ใจ ให้ "ถามผู้ใช้กลับ" ว่าเป็นวันไหนช่วงไหน แล้วหยุด ห้ามเดาแล้วบันทึกเอง
-3. เมื่อรู้วันและ slot แล้ว ให้เรียก save_shot เพื่อเก็บภาพเข้าคลังของวันนั้น โดยระบุ kind ตามสิ่งที่เห็นในภาพ (intraday = กราฟราคาระหว่างวัน, oi = ตาราง/กราฟ Open Interest แยก Call/Put, oichg = การเปลี่ยนแปลงของ OI)
-4. เรียก save_metrics ครั้งเดียวเพื่อบันทึกตัวเลขจากภาพทุกชนิดที่แนบมา ถอดให้ครบ:
+1. อ่านวันและเวลาที่ปรากฏ "ในภาพ" — บนแกน X ของกราฟ, หัวตาราง QuikStrike ("As of MM/DD/YYYY"), มุมจอ, หรือแถบสถานะ/นาฬิกา ใช้เวลานั้นเทียบตารางด้านบนเพื่อหา slot อย่าใช้เวลาปัจจุบันของระบบมาเดา
+2. เรื่อง "ปี" ให้ระวังเป็นพิเศษ:
+   - นาฬิกา/แถบสถานะมุมจอ (เช่น "14:19 ศ. 21 ส.ค.") มักมีแค่ วัน-เดือน "ไม่มีปี" — ห้ามเดาปีเองจากปีปัจจุบัน
+   - อ่านสิ่งเหล่านี้จากภาพให้ครบ: เดือน, วันที่, ตัวย่อวันในสัปดาห์ (อา./จ./อ./พ./พฤ./ศ./ส.), และปีถ้ามี (รวมปี พ.ศ. เช่น 2568)
+   - แล้วเรียกเครื่องมือ resolve_date ด้วยค่าที่อ่านได้ (month, day, weekday, year ถ้ามี) — มันจะคืน date รูปแบบ YYYY-MM-DD ที่ถูกต้อง ให้ใช้ค่านั้นใน save_shot/save_metrics/save_note เสมอ อย่าคำนวณปีเอง
+   - ถ้า resolve_date คืน warning (เช่น วันในสัปดาห์ไม่ตรงกับปีไหนเลย) ให้ "ถามผู้ใช้กลับ" ว่าเป็นปีไหน แล้วหยุด
+3. ถ้าอ่านวัน เดือน หรือเวลาจากในภาพไม่ออกเลย ให้ "ถามผู้ใช้กลับ" แล้วหยุด ห้ามเดาแล้วบันทึกเอง
+4. เมื่อรู้วันและ slot แล้ว ให้เรียก save_shot เพื่อเก็บภาพเข้าคลังของวันนั้น โดยระบุ kind ตามสิ่งที่เห็นในภาพ (intraday = กราฟราคาระหว่างวัน, oi = ตาราง/กราฟ Open Interest แยก Call/Put, oichg = การเปลี่ยนแปลงของ OI)
+5. เรียก save_metrics ครั้งเดียวเพื่อบันทึกตัวเลขจากภาพทุกชนิดที่แนบมา ถอดให้ครบ:
    - จากภาพ Intraday (หัวกราฟมีบรรทัด "Put: ... Call: ... Vol: ... Vol Chg: ... Future Chg: ..."): ราคาสัญญา (เลขหลัง "vs"), Put, Call, Vol, Vol Chg, Future Chg
    - จากภาพ OI: ยอดรวม Call OI, ยอดรวม Put OI, P/C ratio
    - จากภาพ OI Chg: ยอดรวมการเปลี่ยนแปลง OI ฝั่ง Call, ฝั่ง Put, และผลรวมสุทธิ
    ช่องที่ไม่มีภาพชนิดนั้นหรืออ่านไม่ออกให้ใส่ null อย่าเดาตัวเลข
-5. เรียก save_note เพื่อจดสรุปแบบละเอียด อ้างตัวเลขยอดรวมของแต่ละภาพที่อ่านได้ ไม่ใช่แค่ OI
-6. ตอบผู้ใช้สั้น ๆ ว่าบันทึกลงวันไหน ช่วงไหน และอ่านวันเวลาได้จากตรงไหนของภาพ
+6. เรียก save_note เพื่อจดสรุปแบบละเอียด อ้างตัวเลขยอดรวมของแต่ละภาพที่อ่านได้ ไม่ใช่แค่ OI
+7. ตอบผู้ใช้สั้น ๆ ว่าบันทึกลงวันไหน (บอกวันในสัปดาห์ด้วย เช่น "ศุกร์ 21 ส.ค. 2025") ช่วงไหน และอ่านวันเวลาได้จากตรงไหนของภาพ
 
 กติกา:
 - ตอบเป็นภาษาไทย กระชับ ตรงประเด็น เหมือนเพื่อนร่วมวิจัยที่คุยกันสั้น ๆ
@@ -129,6 +217,28 @@ const ANTHROPIC_TOOLS: Anthropic.Tool[] = [
       additionalProperties: false,
     },
     strict: true,
+  },
+  {
+    name: "resolve_date",
+    description:
+      "แปลงวัน-เดือน (และวันในสัปดาห์ถ้ามี) ที่อ่านจากภาพให้เป็นวันที่ YYYY-MM-DD ที่ถูกต้อง จัดการเรื่องปีที่ไม่ปรากฏในภาพและปี พ.ศ. ให้เอง เรียกก่อน save_shot/save_metrics/save_note ทุกครั้งที่จดจากภาพ",
+    input_schema: {
+      type: "object",
+      properties: {
+        month: { type: "integer", description: "เดือน 1–12 ที่อ่านจากภาพ" },
+        day: { type: "integer", description: "วันที่ 1–31 ที่อ่านจากภาพ" },
+        weekday: {
+          type: "string",
+          description: "ตัวย่อวันในสัปดาห์ที่เห็นในภาพ เช่น ศ, พฤ, อา หรือ Fri เว้นว่างถ้าไม่มี",
+        },
+        year: {
+          type: "integer",
+          description: "ปีที่ปรากฏในภาพจริง ๆ เท่านั้น (ใส่ปี พ.ศ. ได้ ระบบแปลงให้) เว้นว่างถ้าภาพไม่มีปี",
+        },
+      },
+      required: ["month", "day"],
+      additionalProperties: false,
+    },
   },
   {
     name: "save_note",
@@ -375,6 +485,27 @@ const GEMINI_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
       type: Type.OBJECT,
       properties: { days: { type: Type.INTEGER, description: "จำนวนวันย้อนหลัง 1–90" } },
       required: ["days"],
+    },
+  },
+  {
+    name: "resolve_date",
+    description:
+      "แปลงวัน-เดือน (และวันในสัปดาห์ถ้ามี) ที่อ่านจากภาพให้เป็นวันที่ YYYY-MM-DD ที่ถูกต้อง จัดการเรื่องปีที่ไม่ปรากฏในภาพและปี พ.ศ. ให้เอง เรียกก่อน save_shot/save_metrics/save_note ทุกครั้งที่จดจากภาพ",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        month: { type: Type.INTEGER, description: "เดือน 1–12 ที่อ่านจากภาพ" },
+        day: { type: Type.INTEGER, description: "วันที่ 1–31 ที่อ่านจากภาพ" },
+        weekday: {
+          type: Type.STRING,
+          description: "ตัวย่อวันในสัปดาห์ที่เห็นในภาพ เช่น ศ, พฤ, อา หรือ Fri เว้นว่างถ้าไม่มี",
+        },
+        year: {
+          type: Type.INTEGER,
+          description: "ปีที่ปรากฏในภาพจริง ๆ เท่านั้น (ใส่ปี พ.ศ. ได้ ระบบแปลงให้) เว้นว่างถ้าภาพไม่มีปี",
+        },
+      },
+      required: ["month", "day"],
     },
   },
   {
@@ -645,6 +776,21 @@ function runTool(
     case "get_stats": {
       const days = Math.min(Math.max(Number(input.days ?? 30) || 30, 1), 90);
       return { result: { series: getSeries(userId, days), streak: getStreak(userId) } };
+    }
+    case "resolve_date": {
+      const month = Number(input.month);
+      const day = Number(input.day);
+      const weekday = input.weekday ? String(input.weekday) : undefined;
+      const year = input.year ? Number(input.year) : undefined;
+      if (!Number.isFinite(month) || !Number.isFinite(day)) {
+        return { result: { error: "ต้องระบุ month และ day เป็นตัวเลข" } };
+      }
+      const r = resolveScreenshotDate({ month, day, weekday, year });
+      return {
+        result: r.date
+          ? { date: r.date, weekday: r.weekday, ...(r.warning ? { warning: r.warning } : {}) }
+          : { error: r.warning ?? "แปลงวันที่ไม่สำเร็จ" },
+      };
     }
     case "save_note": {
       const date = String(input.date ?? "");
@@ -990,13 +1136,14 @@ export async function* streamChat(
     ms: Date.now() - startedAt,
     ...usage,
   });
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
   const contextLines = [
-    `วันนี้คือ ${today}`,
+    `วันนี้คือ ${today} (${THAI_WEEKDAYS[now.getDay()]})`,
     context.date ? `ผู้ใช้กำลังดูบันทึกของวันที่ ${context.date}` : null,
     context.slot ? `ช่วงเวลาที่เปิดอยู่คือ ${context.slot}` : null,
     attachments.length
-      ? `ข้อความล่าสุดมีภาพแนบมา ${attachments.length} ภาพ (ลำดับที่ 1–${attachments.length}) — อ่านวันและเวลาจากในภาพก่อนบันทึก`
+      ? `ข้อความล่าสุดมีภาพแนบมา ${attachments.length} ภาพ (ลำดับที่ 1–${attachments.length}) — อ่านวัน/เดือน/วันในสัปดาห์จากในภาพ แล้วเรียก resolve_date ให้ได้วันที่ YYYY-MM-DD ก่อนบันทึก อย่าเดาปีเอง`
       : null,
   ].filter(Boolean);
 
