@@ -143,7 +143,20 @@ chatRoutes.post("/chat", chatUpload.array("files", 3) as any, async (req, res) =
 
   let answer = "";
   let stats: unknown = null;
+  let aborted = false;
   const savedNotes: Array<{ date: string; slot: string }> = [];
+
+  // The browser only drops this connection when the user presses stop (or shuts
+  // the tab). Navigating between pages deliberately keeps it open, which is what
+  // lets a turn finish while the user is looking at another page.
+  //
+  // Listen on `res`, not `req`: a fully-consumed request stream can emit
+  // "close" on its own, which would abort every turn the moment multer finished
+  // reading the body. `writableEnded` distinguishes a real disconnect from this
+  // response simply having finished.
+  res.on("close", () => {
+    if (!res.writableEnded) aborted = true;
+  });
 
   try {
     for await (const event of streamChat(userId, history, {
@@ -158,10 +171,22 @@ chatRoutes.post("/chat", chatUpload.array("files", 3) as any, async (req, res) =
         stats = event.stats;
       }
       send(event);
+      // Breaking here returns the generator, unwinding the model loop instead of
+      // running it to completion against a socket nobody is reading.
+      if (aborted) break;
     }
   } catch (error) {
     const { message: description } = describeAiError(error);
     send({ type: "error", message: description });
+    // Keep the failure in the transcript. Without this the turn vanished on the
+    // next reload and the user could not tell whether anything had run.
+    answer = answer.trim() ? `${answer}\n\n⚠️ ${description}` : `⚠️ ${description}`;
+  }
+
+  // Whatever was produced before the stop is still worth keeping — anything the
+  // tools already wrote happened, so an empty transcript would misrepresent it.
+  if (aborted && answer.trim()) {
+    answer = `${answer}\n\n_(หยุดกลางคัน)_`;
   }
 
   if (answer.trim()) {

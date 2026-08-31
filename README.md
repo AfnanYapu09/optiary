@@ -92,11 +92,23 @@ come back `null` rather than guessed. It runs automatically on upload when the
 user's `autoExtract` setting is on, and on demand from the capture screen.
 
 **The research assistant** (`server/src/ai/chat.ts`) is a streaming tool loop
-with four tools over the user's own data: `get_day`, `search_notes`, `get_stats`
-and `save_note`. Replies stream to the browser as Server-Sent Events; when the
-model writes into a note the client gets a `note-saved` event and refreshes.
-Every tool is scoped to the signed-in user, so the assistant can only ever read
-and write that person's notebook.
+with fourteen tools over the user's own data — reading (`get_day`,
+`search_notes`, `get_stats`, `list_days`, `get_settings`), writing (`save_note`,
+`edit_note`, `set_tags`, `save_shot`, `save_metrics`, `save_news`,
+`update_settings`, `delete_data`) and one pure helper, `resolve_date`. Replies
+stream to the browser as Server-Sent Events; when the model writes into a note
+the client gets a `note-saved` event and refreshes. Every tool is scoped to the
+signed-in user, so the assistant can only ever read and write that person's
+notebook.
+
+A run is owned by `web/src/lib/chatRuns.tsx`, which sits above the router, so an
+answer keeps streaming while the user moves between pages; only the stop button
+(or closing the tab) cancels it. Two safety rules are enforced in code rather
+than left to the prompt: a date read off a screenshot must come back from
+`resolve_date` before anything can be saved against it, and the fields that only
+exist on the Intraday header (`priceClose`, `futureChg`, `vol`, `volChg`,
+`intradayPut`, `intradayCall`) are forced to `null` when no Intraday image was in
+the batch — the OI screenshots show a similar price captured moments apart.
 
 Both use adaptive thinking and a cached system prefix.
 

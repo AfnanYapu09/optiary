@@ -72,9 +72,30 @@ function json(method: string, body: unknown): RequestInit {
   return { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
 }
 
+/**
+ * Collapses identical GETs that are in flight at the same moment into one
+ * request. Two components can legitimately want the same data on the same
+ * render — the shell and the home page both need the dataset totals — and
+ * without this each mount fires its own copy.
+ *
+ * Only concurrent calls share; once a request settles the entry is dropped, so
+ * nothing is ever served from a stale cache after a write.
+ */
+const inFlight = new Map<string, Promise<unknown>>();
+
+function shared<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const existing = inFlight.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const promise = run().finally(() => {
+    inFlight.delete(key);
+  });
+  inFlight.set(key, promise);
+  return promise;
+}
+
 export const api = {
-  authConfig: () => request<AuthConfig>("/auth/config"),
-  me: () => request<{ user: User; token?: string }>("/me"),
+  authConfig: () => shared("auth/config", () => request<AuthConfig>("/auth/config")),
+  me: () => shared("me", () => request<{ user: User; token?: string }>("/me")),
   /** The server derives the identity from the ID token; nothing else is trusted. */
   firebaseLogin: async (idToken: string) => {
     const res = await request<{ user: User; token?: string; slots?: any }>(
@@ -98,8 +119,10 @@ export const api = {
   },
 
   calendar: (month: string) =>
-    request<{ month: string; days: CalendarDay[]; streak: Streak }>(`/calendar?month=${month}`),
-  day: (date: string) => request<DayRecord>(`/days/${date}`),
+    shared(`calendar:${month}`, () =>
+      request<{ month: string; days: CalendarDay[]; streak: Streak }>(`/calendar?month=${month}`),
+    ),
+  day: (date: string) => shared(`day:${date}`, () => request<DayRecord>(`/days/${date}`)),
   saveEntry: (date: string, slot: SlotId, patch: { note?: string; tags?: string[]; metrics?: Metrics }) =>
     request<EntryRecord>(`/days/${date}/${slot}`, json("PUT", patch)),
 
@@ -139,7 +162,7 @@ export const api = {
     request<{ items: LibraryItem[] }>(`/library${kind ? `?kind=${kind}` : ""}`),
   compare: (left: string, right: string) =>
     request<CompareResult>(`/compare?left=${left}&right=${right}`),
-  stats: (days: number) => request<Stats>(`/stats?days=${days}`),
+  stats: (days: number) => shared(`stats:${days}`, () => request<Stats>(`/stats?days=${days}`)),
 
   settings: () => request<{ settings: UserSettings }>("/settings"),
   saveSettings: (settings: UserSettings) =>

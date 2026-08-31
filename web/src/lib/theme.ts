@@ -42,7 +42,7 @@ export function applyTheme(): void {
   else root.setAttribute("data-accent", accent);
 
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", dark ? "#0f1113" : "#f8f7f3");
+  if (meta) meta.setAttribute("content", dark ? "#0d1014" : "#fffffe");
 }
 
 export function setThemeMode(mode: ThemeMode): void {

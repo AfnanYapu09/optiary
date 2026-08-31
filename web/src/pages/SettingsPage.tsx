@@ -16,14 +16,6 @@ import {
 } from "../lib/theme.ts";
 import "../styles/settings.css";
 
-const SECTIONS = [
-  { id: "profile", label: "โปรไฟล์" },
-  { id: "appearance", label: "หน้าตา" },
-  { id: "slots", label: "ช่วงเวลาบันทึก" },
-  { id: "ai", label: "ผู้ช่วย AI" },
-  { id: "data", label: "ข้อมูลและการส่งออก" },
-];
-
 const THEME_OPTIONS: Array<{ id: ThemeMode; label: string }> = [
   { id: "light", label: "สว่าง" },
   { id: "dark", label: "มืด" },
@@ -54,12 +46,11 @@ const PREFS: Array<{ key: keyof UserSettings; name: string; desc: string }> = [
 ];
 
 export default function SettingsPage() {
-  const { user, applySettings, signOut, config } = useSession();
+  const { user, applySettings, config } = useSession();
   const toast = useToast();
   const [draft, setDraft] = useState<UserSettings | null>(user?.settings ?? null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [section, setSection] = useState("profile");
   const [themeMode, setThemeModeState] = useState<ThemeMode>(getThemeMode());
   const [accent, setAccentState] = useState<Accent>(getAccent());
 
@@ -102,10 +93,10 @@ export default function SettingsPage() {
 
   return (
     <div className="settings">
-      <header className="settings-bar">
-        <span style={{ font: "400 16px/1 var(--thai)", color: "var(--ink)" }}>ตั้งค่า</span>
+      <header className="toolbar">
+        <h1>ตั้งค่า</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span className="mono" style={{ fontSize: 11, color: "var(--t-40)" }}>
+          <span className="mono" style={{ fontSize: 10.5, color: "var(--t-40)" }}>
             {savedAt ? `SAVED ${savedAt}` : dirty ? "UNSAVED" : "SAVED"}
           </span>
           <button className="btn-gold" disabled={!dirty || saving} onClick={() => void save()}>
@@ -114,44 +105,28 @@ export default function SettingsPage() {
         </div>
       </header>
 
+      {/* One column. The old left nav only scroll-jumped between five short
+          sections that already fit on the page — pure chrome. */}
       <div className="settings-body">
-        <nav className="settings-nav">
-          {SECTIONS.map((item) => (
-            <button
-              key={item.id}
-              className={section === item.id ? "active" : ""}
-              onClick={() => {
-                setSection(item.id);
-                document.getElementById(`sec-${item.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
         <div className="settings-main">
-          <section id="sec-profile" className="settings-profile">
+          <section className="settings-profile">
             <div
               className="avatar"
               style={
                 user.picture
-                  ? { width: 48, height: 48, backgroundImage: `url(${user.picture})`, backgroundSize: "cover" }
-                  : { width: 48, height: 48 }
+                  ? { width: 44, height: 44, backgroundImage: `url(${user.picture})`, backgroundSize: "cover" }
+                  : { width: 44, height: 44 }
               }
             />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5, minWidth: 0 }}>
-              <span style={{ font: "400 16px/1.3 var(--thai)", color: "var(--ink)" }}>{user.name}</span>
-              <span className="mono" style={{ fontSize: 11.5, color: "var(--t-40)", overflowWrap: "anywhere" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+              <span style={{ font: "400 15px/1.3 var(--thai)", color: "var(--ink)" }}>{user.name}</span>
+              <span className="mono" style={{ fontSize: 11, color: "var(--t-40)", overflowWrap: "anywhere" }}>
                 {user.email} · {user.provider === "google" ? "เชื่อมต่อผ่าน Google" : "บัญชีทดลองในเครื่อง"}
               </span>
             </div>
-            <button className="btn" onClick={() => void signOut()}>
-              ออกจากระบบ
-            </button>
           </section>
 
-          <section id="sec-appearance" className="settings-section">
+          <section className="settings-section">
             <span className="eyebrow">หน้าตา</span>
             <div className="settings-rows">
               <div className="pref-row">
@@ -199,7 +174,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section id="sec-slots" className="settings-section">
+          <section className="settings-section">
             <span className="eyebrow">ช่วงเวลาบันทึก</span>
             <div className="settings-rows">
               {SLOTS.map((slot) => {
@@ -247,7 +222,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section id="sec-ai" className="settings-section">
+          <section className="settings-section">
             <span className="eyebrow">ผู้ช่วย AI และข้อมูล</span>
             {config?.ai ? (
               <p className="settings-note">
@@ -280,7 +255,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section id="sec-data" className="settings-section">
+          <section className="settings-section">
             <span className="eyebrow">สัญญาและการส่งออก</span>
             <div className="settings-rows">
               <div className="pref-row">

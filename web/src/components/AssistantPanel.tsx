@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, chatImageUrl, streamChat } from "../lib/api.ts";
+import { api, chatImageUrl } from "../lib/api.ts";
 import Markdown from "./Markdown.tsx";
 import { useSession } from "../lib/session.tsx";
 import { useToast } from "../lib/toast.tsx";
 import { saveChatMessageToCloud } from "../lib/firebase.ts";
+import { useChatRun, useChatRuns } from "../lib/chatRuns.tsx";
 import { slotDef, type ChatMessage, type ChatStats, type SlotId } from "../lib/types.ts";
 import "../styles/assistant.css";
 
@@ -57,6 +58,12 @@ const SendIcon = () => (
   </svg>
 );
 
+const StopIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" />
+  </svg>
+);
+
 /** "z-ai/glm-5.3-flash" -> "GLM 5.3 Flash" · "gemini-3.6-flash" -> "Gemini 3.6 Flash" */
 function prettyModel(model: string): string {
   const tail = model.split("/").pop() ?? model;
@@ -67,22 +74,6 @@ function prettyModel(model: string): string {
     )
     .join(" ");
 }
-
-const TOOL_LABELS: Record<string, string> = {
-  get_day: "กำลังอ่านบันทึกของวัน…",
-  search_notes: "กำลังค้นบันทึกย้อนหลัง…",
-  get_stats: "กำลังรวมตัวเลขย้อนหลัง…",
-  list_days: "กำลังดูรายการวัน…",
-  get_settings: "กำลังอ่านการตั้งค่า…",
-  save_note: "กำลังบันทึกลงโน้ต…",
-  save_news: "กำลังจดข่าวเศรษฐกิจ…",
-  edit_note: "กำลังแก้โน้ต…",
-  set_tags: "กำลังปรับแท็ก…",
-  save_shot: "กำลังเก็บภาพเข้าคลัง…",
-  save_metrics: "กำลังบันทึกตัวเลขที่อ่านได้…",
-  update_settings: "กำลังปรับตั้งค่า…",
-  delete_data: "กำลังจัดการลบข้อมูล…",
-};
 
 const MAX_ATTACHMENTS = 3;
 
@@ -107,11 +98,16 @@ export default function AssistantPanel({
   const { user, config } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [partial, setPartial] = useState("");
-  const [activity, setActivity] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [elapsed, setElapsed] = useState(0);
+
+  // The turn itself lives above the router, so leaving this page mid-answer no
+  // longer cancels it — coming back re-attaches to the same live stream.
+  const { start, stop, clear } = useChatRuns();
+  const run = useChatRun(thread);
+  const streaming = Boolean(run && !run.done);
+  const partial = run?.partial ?? "";
+  const activity = run?.activity ?? null;
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
   const openLightbox = useCallback((urls: string[], index: number) => {
     if (urls.length) setLightbox({ urls, index });
@@ -137,6 +133,10 @@ export default function AssistantPanel({
   const filePicker = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const sentInitial = useRef(false);
+  // The optimistic user bubble belongs only to the panel that pressed send. A
+  // panel mounted later loads the turn from the transcript instead — the server
+  // persists it before streaming — so showing the echo there would double it.
+  const ownsEcho = useRef(false);
 
   // Auto-grow the composer like Claude's, capped so it never eats the thread.
   useEffect(() => {
@@ -146,14 +146,16 @@ export default function AssistantPanel({
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [draft]);
 
-  // A ticking "…12.3 วิ" while the model works, so a slow reply doesn't look hung.
+  // A ticking "…12.3 วิ" while the model works, so a slow reply doesn't look
+  // hung. Counted from the run's own start so the timer stays honest when the
+  // panel is remounted part-way through a turn.
   useEffect(() => {
-    if (!streaming) return;
-    const started = Date.now();
-    setElapsed(0);
-    const t = setInterval(() => setElapsed(Date.now() - started), 200);
+    if (!run || run.done) return;
+    const startedAt = run.startedAt;
+    setElapsed(Date.now() - startedAt);
+    const t = setInterval(() => setElapsed(Date.now() - startedAt), 200);
     return () => clearInterval(t);
-  }, [streaming]);
+  }, [run]);
 
   const addFiles = useCallback(
     (incoming: File[]) => {
@@ -191,101 +193,65 @@ export default function AssistantPanel({
 
       setDraft("");
       setAttachments([]);
-      setStreaming(true);
-      setPartial("");
-      setActivity(null);
-      const localPreviews = files.map((file) => ({ url: URL.createObjectURL(file), mime: file.type }));
-      setMessages((current) => [
-        ...current,
-        {
-          id: `local-${Date.now()}`,
-          role: "user",
-          content: message || (files.length ? "ช่วยอ่านภาพนี้แล้วจดให้หน่อย" : ""),
-          meta: { attachments: localPreviews },
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      ownsEcho.current = true;
       if (user?.id) {
         void saveChatMessageToCloud(user.id, "user", message || "[แนบภาพ]");
       }
 
       let answer = "";
-      let stats: ChatStats | null = null;
-      const saved: Array<{ date: string; slot: SlotId }> = [];
-
-      try {
-        await streamChat({ message, thread, slot, files }, (event) => {
-          switch (event.type) {
-            case "text":
-              answer += event.text;
-              setActivity(null);
-              setPartial(answer);
-              break;
-            case "tool":
-              setActivity(TOOL_LABELS[event.name] ?? "กำลังค้นข้อมูล…");
-              break;
-            case "note-saved":
-              saved.push({ date: event.date, slot: event.slot });
-              onNoteSaved?.(event.date, event.slot);
-              break;
-            case "shot-saved":
-            case "metrics-saved":
-              // Both write into the day the assistant picked, so the page behind
-              // the panel has to reload that day just as a note save would.
-              onNoteSaved?.(event.date, event.slot);
-              break;
-            case "data-changed":
-              // Delete/clear tools; when a whole wipe leaves no date, fall back
-              // to the panel's own thread so the page behind it still refreshes.
-              onNoteSaved?.(event.date ?? thread, event.slot ?? slot);
-              break;
-            case "settings-changed":
-              onNoteSaved?.(thread, slot);
-              break;
-            case "done":
-              stats = event.stats;
-              break;
-            case "error":
-              toast(event.message, "err");
-              break;
-            default:
-              break;
+      await start({
+        thread,
+        message,
+        slot,
+        files,
+        onEvent: (event) => {
+          if (event.type === "text") answer += event.text;
+          if (event.type === "error") toast(event.message, "err");
+          // The page behind the panel refreshes whatever the run wrote. These
+          // still fire here (not only through the store) so the panel's own
+          // page updates even when it is the only listener.
+          if (
+            event.type === "note-saved" ||
+            event.type === "shot-saved" ||
+            event.type === "metrics-saved"
+          ) {
+            onNoteSaved?.(event.date, event.slot);
           }
-        });
-      } catch (error) {
-        toast(error instanceof Error ? error.message : "แชทล้มเหลว", "err");
-      }
+          if (event.type === "data-changed") onNoteSaved?.(event.date ?? thread, event.slot ?? slot);
+          if (event.type === "settings-changed") onNoteSaved?.(thread, slot);
+        },
+      });
 
-      setStreaming(false);
-      setActivity(null);
-      setPartial("");
-      localPreviews.forEach((p) => URL.revokeObjectURL(p.url));
-
-      // Pull the canonical transcript back so the user turn gets real attachment
-      // ids (served from disk) and the assistant turn carries its saved stats.
-      try {
-        const res = await api.chatHistory(thread);
-        setMessages(res.messages);
-      } catch {
-        if (answer.trim()) {
-          setMessages((current) => [
-            ...current,
-            {
-              id: `local-a-${Date.now()}`,
-              role: "assistant",
-              content: answer,
-              meta: { savedNotes: saved, stats },
-              createdAt: new Date().toISOString(),
-            },
-          ]);
-        }
-      }
       if (answer.trim() && user?.id) {
         void saveChatMessageToCloud(user.id, "assistant", answer);
       }
     },
-    [attachments, onNoteSaved, slot, streaming, thread, toast, user?.id],
+    [attachments, onNoteSaved, slot, start, streaming, thread, toast, user?.id],
   );
+
+  // When a run finishes — whether or not this panel was mounted for it — pull
+  // the canonical transcript so the user turn gets real attachment ids and the
+  // assistant turn carries its saved stats, then drop the finished run.
+  useEffect(() => {
+    if (!run?.done) return;
+    let alive = true;
+    api
+      .chatHistory(thread)
+      .then((res) => {
+        if (alive) setMessages(res.messages);
+      })
+      .catch(() => {
+        /* the transcript stays as-is; the next mount refetches */
+      })
+      .finally(() => {
+        if (!alive) return;
+        ownsEcho.current = false;
+        clear(thread);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [clear, run?.done, thread]);
 
   useEffect(() => {
     if (initialQuestion && !sentInitial.current) {
@@ -372,6 +338,31 @@ export default function AssistantPanel({
             </div>
           );
         })}
+
+        {/* Optimistic user turn for the run in flight. It lives on the run, not
+            in local state, so it is still shown after navigating back. */}
+        {run?.echo && ownsEcho.current ? (
+          <div className="turn user">
+            <div className="bubble user">
+              {run.echo.previews.length ? (
+                <div className="bubble-shots">
+                  {run.echo.previews.map((preview, i) => (
+                    <button
+                      key={preview.url}
+                      type="button"
+                      className="bubble-shot"
+                      onClick={() => openLightbox(run.echo!.previews.map((p) => p.url), i)}
+                      aria-label="ดูรูปเต็ม"
+                    >
+                      <img src={preview.url} alt="ภาพที่แนบ" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {run.echo.content ? <p>{run.echo.content}</p> : null}
+            </div>
+          </div>
+        ) : null}
 
         {partial ? (
           <div className="turn ai">
@@ -488,14 +479,28 @@ export default function AssistantPanel({
               placeholder={attachments.length ? "บอกเพิ่มได้ หรือกดส่งเลย" : "เขียนข้อความ…"}
               disabled={streaming}
             />
-            <button
-              type="submit"
-              className="assistant-send"
-              disabled={streaming || (!draft.trim() && attachments.length === 0)}
-              aria-label="ส่ง"
-            >
-              <SendIcon />
-            </button>
+            {/* While a turn is running the same slot becomes a stop control —
+                the square is the one gesture people already read as "halt". */}
+            {streaming ? (
+              <button
+                type="button"
+                className="assistant-send stopping"
+                onClick={() => stop(thread)}
+                title="หยุดคำตอบ"
+                aria-label="หยุด"
+              >
+                <StopIcon />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="assistant-send"
+                disabled={!draft.trim() && attachments.length === 0}
+                aria-label="ส่ง"
+              >
+                <SendIcon />
+              </button>
+            )}
           </div>
         </form>
 

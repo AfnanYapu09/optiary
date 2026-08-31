@@ -5,27 +5,15 @@
   min-height: 0;
 }
 
-.chart-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 26px;
-  border-bottom: 1px solid var(--line);
-  background: var(--chrome);
-  flex: none;
-  flex-wrap: wrap;
-}
-
 .legend {
   display: flex;
   align-items: center;
   gap: 7px;
-  font: 300 11.5px/1 var(--thai);
-  color: var(--t-60);
+  font: 300 11px/1 var(--thai);
+  color: var(--t-55);
 }
 .legend i {
-  width: 16px;
+  width: 15px;
   height: 2px;
   display: block;
   flex: none;
@@ -33,43 +21,47 @@
 
 .chart-body {
   flex: 1;
-  padding: 24px 26px;
+  padding: 0 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   min-height: 0;
   overflow: auto;
 }
 
+/* Same tape language as the home page — one grid of hairline-separated cells. */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 10px;
   flex: none;
 }
 .kpi {
-  padding: 16px 17px;
-  border-radius: 11px;
-  background: var(--fill);
-  border: 1px solid var(--line-2);
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  background-color: var(--panel);
+  background-image: var(--sheet);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 9px;
   min-width: 0;
 }
 .kpi b {
-  font: 400 25px/1 var(--mono);
+  font: 500 30px/1 var(--mono);
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
   overflow-wrap: anywhere;
 }
 .kpi small {
-  font: 300 11.5px/1.4 var(--thai);
+  font: 300 10.5px/1.4 var(--thai);
 }
 
 .chart-main {
   flex: 1;
   min-height: 300px;
-  padding: 20px 22px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -83,7 +75,8 @@
   flex-wrap: wrap;
 }
 
-.chart-frame {
+.chart-frame,
+.chart-main > .empty {
   flex: 1;
   position: relative;
   min-height: 220px;
@@ -98,10 +91,10 @@
   position: absolute;
   top: 8px;
   transform: translateX(-50%);
-  background: var(--panel);
+  background: var(--panel-2);
   border: 1px solid var(--line-3);
-  border-radius: 9px;
-  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  padding: 8px 11px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -162,6 +155,9 @@
   flex-direction: column;
   min-height: 0;
   position: relative;
+  /* A bar per slot, kept slim — five wide blocks read as an area, not a series. */
+  width: 34px;
+  margin: 0 auto;
 }
 /* Zero line: bars grow up from here, or up and down when values straddle it. */
 .bar-track::after {
@@ -185,10 +181,11 @@
 .bar-half.up {
   align-items: flex-end;
 }
+/* OI building vs. unwinding — the same green/red the tape uses for a change. */
 .bar-half.up i {
   width: 100%;
-  background: var(--gold);
-  border-radius: 3px 3px 0 0;
+  background: var(--up);
+  border-radius: 2px 2px 0 0;
   display: block;
 }
 .bar-half.down {
@@ -196,8 +193,8 @@
 }
 .bar-half.down i {
   width: 100%;
-  background: rgba(111, 159, 216, 0.6);
-  border-radius: 0 0 3px 3px;
+  background: var(--down);
+  border-radius: 0 0 2px 2px;
   display: block;
 }
 .bar-col > span {
@@ -211,18 +208,18 @@
 }
 
 .chart-insight {
-  border-radius: 12px;
-  border: 1px solid var(--gold-fill-2);
+  border-radius: var(--radius-sm);
+  border: none;
   background: var(--gold-fill);
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .chart-insight p {
   margin: 0;
   flex: 1;
-  font: 300 13px/1.8 var(--thai);
+  font: 300 12.5px/1.8 var(--thai);
   color: var(--t-80);
   text-wrap: pretty;
 }
@@ -236,12 +233,14 @@
   }
 }
 
-@media (max-width: 900px) {
-  .chart-bar,
+@media (max-width: 980px) {
   .chart-body {
-    padding: 16px;
+    padding: 14px;
+  }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
   }
   .kpi b {
-    font-size: 21px;
+    font-size: 19px;
   }
 }
