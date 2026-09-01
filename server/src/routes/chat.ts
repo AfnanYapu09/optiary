@@ -21,7 +21,10 @@ const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gi
  */
 const chatUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: config.maxUploadBytes, files: 3 },
+  // No cap on how many screenshots ride along with one turn — a research day is
+  // 15 shots and the old limit of 3 forced the user to split it up. Per-file size
+  // still applies; the practical ceiling is the model request, not this route.
+  limits: { fileSize: config.maxUploadBytes },
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_MIME.has(file.mimetype)) {
       cb(new Error("รองรับเฉพาะไฟล์ PNG, JPEG, WebP และ GIF"));
@@ -94,7 +97,7 @@ chatRoutes.get("/chat-image/:id/file", (req, res) => {
  * persisted immediately; the assistant turn is persisted once the run finishes
  * so a dropped connection never leaves half an answer in the transcript.
  */
-chatRoutes.post("/chat", chatUpload.array("files", 3) as any, async (req, res) => {
+chatRoutes.post("/chat", chatUpload.array("files") as any, async (req, res) => {
   const attachments: ChatAttachment[] = ((req.files as Express.Multer.File[] | undefined) ?? []).map(
     (f) => ({ buffer: f.buffer, mime: f.mimetype, originalname: f.originalname }),
   );
@@ -202,7 +205,15 @@ chatRoutes.post("/chat", chatUpload.array("files", 3) as any, async (req, res) =
 // Surfaces multer's own failures (file too large, wrong type) as clean JSON.
 chatRoutes.use((err: Error, _req: unknown, res: any, next: (e?: unknown) => void) => {
   if (err instanceof multer.MulterError) {
-    res.status(413).json({ error: "ไฟล์ใหญ่เกินกำหนด" });
+    // Only per-file size is capped now, so say which limit was hit and what it
+    // is — "too large" alone is not actionable when a batch has many files.
+    const mb = Math.round(config.maxUploadBytes / 1024 / 1024);
+    res.status(413).json({
+      error:
+        err.code === "LIMIT_FILE_SIZE"
+          ? `มีไฟล์ที่ใหญ่เกิน ${mb} MB — ย่อภาพแล้วลองใหม่`
+          : `อัปโหลดไม่สำเร็จ (${err.code})`,
+    });
     return;
   }
   if (err?.message?.startsWith("รองรับเฉพาะ")) {

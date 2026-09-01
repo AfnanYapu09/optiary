@@ -75,8 +75,6 @@ function prettyModel(model: string): string {
     .join(" ");
 }
 
-const MAX_ATTACHMENTS = 3;
-
 type Props = {
   /** `global`, or a `YYYY-MM-DD` thread scoped to one day. */
   thread: string;
@@ -161,10 +159,14 @@ export default function AssistantPanel({
     (incoming: File[]) => {
       const images = incoming.filter((f) => f.type.startsWith("image/"));
       if (!images.length) return;
-      setAttachments((current) => [...current, ...images].slice(0, MAX_ATTACHMENTS));
+      setAttachments((current) => [...current, ...images]);
     },
     [],
   );
+
+  // Every screenshot rides inline in one model request, so a very large batch
+  // is worth flagging before it is sent rather than failing at the provider.
+  const batchBytes = useMemo(() => attachments.reduce((n, f) => n + f.size, 0), [attachments]);
 
   // Object URLs are revoked on replacement so previews don't leak between turns.
   const previews = useMemo(
@@ -422,6 +424,17 @@ export default function AssistantPanel({
               event.target.value = "";
             }}
           />
+          {attachments.length > 2 ? (
+            <div className="assistant-batch">
+              <b>{attachments.length}</b> ภาพ · <b>{(batchBytes / 1024 / 1024).toFixed(1)} MB</b>
+              {batchBytes > 25 * 1024 * 1024 ? (
+                <span className="warn">— ชุดใหญ่มาก อาจใช้เวลานานหรือเกินขีดจำกัดของโมเดล</span>
+              ) : null}
+              <button type="button" className="ghost" disabled={streaming} onClick={() => setAttachments([])}>
+                เอาออกทั้งหมด
+              </button>
+            </div>
+          ) : null}
           {previews.length ? (
             <div className="assistant-attachments">
               {previews.map((preview, i) => (
@@ -453,7 +466,7 @@ export default function AssistantPanel({
               className="assistant-attach"
               title="แนบภาพ (วางจากคลิปบอร์ดได้)"
               aria-label="แนบภาพ"
-              disabled={streaming || attachments.length >= MAX_ATTACHMENTS}
+              disabled={streaming}
               onClick={() => filePicker.current?.click()}
             >
               <PlusIcon />
