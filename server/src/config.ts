@@ -9,12 +9,18 @@ function bool(v: string | undefined, dflt = false): boolean {
   return /^(1|true|yes|on)$/i.test(v);
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+// In development, always use port 3000 — the PORT env var is reserved for
+// the harness's own MCP proxy (9091) and must not leak into the app server.
+const devPort = 3000;
+const effectivePort = isProduction ? Number(process.env.PORT ?? 3000) : devPort;
+
 export const config = {
-  port: Number(process.env.PORT ?? 3000),
+  port: effectivePort,
   /** Public origin of the web app, used for OAuth redirects and CORS. */
-  webOrigin: process.env.WEB_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
+  webOrigin: process.env.WEB_ORIGIN ?? `http://localhost:${effectivePort}`,
   /** Public origin of this API, used to build the OAuth redirect URI. */
-  apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
+  apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${effectivePort}`,
 
   dataDir: process.env.DATA_DIR ?? path.join(root, "data"),
 
