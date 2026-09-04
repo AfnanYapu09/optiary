@@ -9,12 +9,20 @@ function bool(v: string | undefined, dflt = false): boolean {
   return /^(1|true|yes|on)$/i.test(v);
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+// A host assigns the port through PORT and the server must honour it. Locally
+// it is pinned instead: development tooling sets PORT for its own processes,
+// and inheriting that moved the app off 3000 and left webOrigin/apiOrigin
+// pointing at a port nothing was serving, which broke OAuth redirects and CORS.
+const devPort = 3000;
+const effectivePort = isProduction ? Number(process.env.PORT ?? 3000) : devPort;
+
 export const config = {
-  port: Number(process.env.PORT ?? 3000),
+  port: effectivePort,
   /** Public origin of the web app, used for OAuth redirects and CORS. */
-  webOrigin: process.env.WEB_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
+  webOrigin: process.env.WEB_ORIGIN ?? `http://localhost:${effectivePort}`,
   /** Public origin of this API, used to build the OAuth redirect URI. */
-  apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
+  apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${effectivePort}`,
 
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? "",

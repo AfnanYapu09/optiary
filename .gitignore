@@ -8,6 +8,9 @@ package-lock.json
 
 # Runtime state. Research data now lives in Supabase; server/data/ is only the
 # leftover local SQLite database kept around for the one-off migration.
+# /data/ is the same thing under a different cwd — it was committed by accident
+# once, dev session secret and all, so both spellings are ignored here.
 server/data/
+/data/
 .session-secret
 *.tsbuildinfo
