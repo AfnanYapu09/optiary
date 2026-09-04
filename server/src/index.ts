@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import express from "express";
 import cookieParser from "cookie-parser";
@@ -6,6 +7,25 @@ import { config } from "./config.js";
 import { attachUser } from "./auth.js";
 import { api } from "./routes/index.js";
 import { seedIfEmpty } from "./seed.js";
+
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const tester = net.createServer();
+    tester.once("error", () => resolve(false));
+    tester.once("listening", () => {
+      tester.close(() => resolve(true));
+    });
+    tester.listen(port, "0.0.0.0");
+  });
+}
+
+async function findAvailablePort(preferred: number): Promise<number> {
+  if (await isPortAvailable(preferred)) return preferred;
+  for (let port = 3000; port <= 3010; port++) {
+    if (await isPortAvailable(port)) return port;
+  }
+  return preferred;
+}
 
 const app = express();
 
@@ -74,8 +94,10 @@ async function startServer() {
     }
   }
 
-  app.listen(config.port, "0.0.0.0", () => {
-    console.log(`optiary server listening on http://0.0.0.0:${config.port}`);
+  const port = await findAvailablePort(config.port);
+
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`optiary server listening on http://0.0.0.0:${port}`);
   });
 }
 
