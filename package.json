@@ -11,8 +11,7 @@
     "build": "npm run build -w web && npm run build -w server",
     "start": "npm run start -w server",
     "lint": "npm run typecheck",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
-    "seed": "npm run seed -w server"
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web"
   },
   "devDependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",

@@ -8,12 +8,12 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "seed": "tsx src/seed.ts"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
     "@google/genai": "^2.19.0",
+    "@supabase/supabase-js": "^2.115.0",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "multer": "^2.3.0",

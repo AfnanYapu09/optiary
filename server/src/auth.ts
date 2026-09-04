@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import { config, googleConfigured, resolveSessionSecret } from "./config.js";
-import { db, nowIso, uid } from "./db.js";
+import { supabase, nowIso, uid } from "./db.js";
 import { defaultSettings, type UserSettings } from "./domain.js";
 import { verifyFirebaseIdToken } from "./firebase-token.js";
 
@@ -98,30 +98,62 @@ function rowToUser(row: UserRow): User {
   };
 }
 
-export function getUser(id: string): User | null {
-  const row = db
-    .prepare("SELECT id, email, name, picture, google_sub, settings FROM users WHERE id = ?")
-    .get(id) as UserRow | undefined;
-  return row ? rowToUser(row) : null;
+const USER_COLUMNS = "id, email, name, picture, google_sub, settings";
+
+/**
+ * Once deployed, the sign-in page is reachable by anyone with a Google account,
+ * and every account that gets in can spend the owner's AI credit. ALLOWED_EMAILS
+ * (comma separated) is the guest list. Leaving it unset keeps the old
+ * behaviour — which is only safe on a machine that isn't on the internet.
+ */
+const allowedEmails = new Set(
+  (process.env.ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+/** Thrown so the sign-in routes can answer 403 instead of a generic failure. */
+export class EmailNotAllowedError extends Error {
+  constructor(email: string) {
+    super(`${email} is not on the allow list`);
+    this.name = "EmailNotAllowedError";
+  }
 }
 
-export function upsertGoogleUser(profile: {
+export function emailAllowed(email: string): boolean {
+  return allowedEmails.size === 0 || allowedEmails.has(email.trim().toLowerCase());
+}
+
+export async function getUser(id: string): Promise<User | null> {
+  const { data } = await supabase.from("users").select(USER_COLUMNS).eq("id", id).maybeSingle();
+  return data ? rowToUser(data as UserRow) : null;
+}
+
+export async function upsertGoogleUser(profile: {
   sub: string;
   email: string;
   name: string;
   picture?: string;
-}): User {
-  const existing = db
-    .prepare("SELECT id, email, name, picture, google_sub, settings FROM users WHERE google_sub = ? OR email = ?")
-    .get(profile.sub, profile.email) as UserRow | undefined;
+}): Promise<User> {
+  if (!emailAllowed(profile.email)) throw new EmailNotAllowedError(profile.email);
+
+  const { data } = await supabase
+    .from("users")
+    .select(USER_COLUMNS)
+    .or(`google_sub.eq.${profile.sub},email.eq.${profile.email}`)
+    .maybeSingle();
+  const existing = data as UserRow | null;
 
   if (existing) {
-    db.prepare("UPDATE users SET google_sub = ?, name = ?, picture = ? WHERE id = ?").run(
-      profile.sub,
-      profile.name,
-      profile.picture ?? null,
-      existing.id,
-    );
+    await supabase
+      .from("users")
+      .update({
+        google_sub: profile.sub,
+        name: profile.name,
+        picture: profile.picture ?? null,
+      })
+      .eq("id", existing.id);
     return rowToUser({
       ...existing,
       name: profile.name,
@@ -131,32 +163,40 @@ export function upsertGoogleUser(profile: {
   }
 
   const id = profile.sub || uid();
-  db.prepare(
-    "INSERT INTO users (id, google_sub, email, name, picture, settings, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
+  await supabase.from("users").insert({
     id,
-    profile.sub,
-    profile.email,
-    profile.name,
-    profile.picture ?? null,
-    JSON.stringify(defaultSettings()),
-    nowIso(),
-  );
-  return getUser(id)!;
+    google_sub: profile.sub,
+    email: profile.email,
+    name: profile.name,
+    picture: profile.picture ?? null,
+    settings: JSON.stringify(defaultSettings()),
+    created_at: nowIso(),
+  });
+  return (await getUser(id))!;
 }
 
 /** Creates (or returns) the local demo account used when Google is not configured. */
-export function upsertLocalUser(email: string, name: string): User {
-  const existing = db
-    .prepare("SELECT id, email, name, picture, google_sub, settings FROM users WHERE email = ?")
-    .get(email) as UserRow | undefined;
-  if (existing) return rowToUser(existing);
+export async function upsertLocalUser(email: string, name: string): Promise<User> {
+  if (!emailAllowed(email)) throw new EmailNotAllowedError(email);
+
+  const { data } = await supabase
+    .from("users")
+    .select(USER_COLUMNS)
+    .eq("email", email)
+    .maybeSingle();
+  if (data) return rowToUser(data as UserRow);
 
   const id = uid();
-  db.prepare(
-    "INSERT INTO users (id, google_sub, email, name, picture, settings, created_at) VALUES (?, NULL, ?, ?, NULL, ?, ?)",
-  ).run(id, email, name, JSON.stringify(defaultSettings()), nowIso());
-  return getUser(id)!;
+  await supabase.from("users").insert({
+    id,
+    google_sub: null,
+    email,
+    name,
+    picture: null,
+    settings: JSON.stringify(defaultSettings()),
+    created_at: nowIso(),
+  });
+  return (await getUser(id))!;
 }
 
 export async function attachUser(req: Request, _res: Response, next: NextFunction): Promise<void> {
@@ -169,7 +209,7 @@ export async function attachUser(req: Request, _res: Response, next: NextFunctio
       if (!id && token.split(".").length === 3) {
         try {
           const identity = await verifyFirebaseIdToken(token);
-          const user = upsertGoogleUser({
+          const user = await upsertGoogleUser({
             sub: identity.sub,
             email: identity.email,
             name: identity.name ?? identity.email.split("@")[0],
@@ -189,7 +229,7 @@ export async function attachUser(req: Request, _res: Response, next: NextFunctio
     }
 
     if (id) {
-      const user = getUser(id);
+      const user = await getUser(id);
       if (user) req.user = user;
     }
   } catch (error) {

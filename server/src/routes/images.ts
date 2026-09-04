@@ -25,22 +25,22 @@ const upload = multer({
 
 imageRoutes.use(["/images", "/images/*", "/library", "/extract/*"], requireUser);
 
-imageRoutes.get("/library", (req, res) => {
+imageRoutes.get("/library", async (req, res) => {
   const kindParam = typeof req.query.kind === "string" ? req.query.kind : "";
   const kind = isImageKind(kindParam) ? kindParam : null;
-  res.json({ items: getLibrary(req.user!.id, kind) });
+  res.json({ items: await getLibrary(req.user!.id, kind) });
 });
 
-imageRoutes.get("/images/:id/file", (req, res) => {
+imageRoutes.get("/images/:id/file", async (req, res) => {
   const id = String(req.params.id ?? "");
-  const file = getImageFile(req.user!.id, id);
+  const file = await getImageFile(req.user!.id, id);
   if (!file) {
     res.status(404).json({ error: "not_found" });
     return;
   }
   res.setHeader("Content-Type", file.mime);
   res.setHeader("Cache-Control", "private, max-age=31536000, immutable");
-  res.sendFile(file.absolutePath);
+  res.send(file.data);
 });
 
 imageRoutes.post("/images/:date/:slot/:kind", upload.single("file") as any, async (req, res) => {
@@ -56,7 +56,7 @@ imageRoutes.post("/images/:date/:slot/:kind", upload.single("file") as any, asyn
     return;
   }
 
-  const image = storeImage(req.user!.id, date, slot, kind, {
+  const image = await storeImage(req.user!.id, date, slot, kind, {
     buffer: req.file.buffer,
     mimetype: req.file.mimetype,
     originalname: req.file.originalname,
@@ -67,19 +67,19 @@ imageRoutes.post("/images/:date/:slot/:kind", upload.single("file") as any, asyn
   if (req.user!.settings.autoExtract) {
     try {
       const result = await extractSlotMetrics(req.user!.id, date, slot);
-      saveEntry(req.user!.id, date, slot, { metrics: result.metrics });
+      await saveEntry(req.user!.id, date, slot, { metrics: result.metrics });
       extraction = { ok: true };
     } catch (error) {
       extraction = { ok: false, message: describeAiError(error).message };
     }
   }
 
-  res.json({ image, extraction, day: getDay(req.user!.id, date) });
+  res.json({ image, extraction, day: await getDay(req.user!.id, date) });
 });
 
-imageRoutes.delete("/images/:id", (req, res) => {
+imageRoutes.delete("/images/:id", async (req, res) => {
   const id = String(req.params.id ?? "");
-  if (!deleteImage(req.user!.id, id)) {
+  if (!(await deleteImage(req.user!.id, id))) {
     res.status(404).json({ error: "not_found" });
     return;
   }

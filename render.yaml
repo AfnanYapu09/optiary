@@ -1,0 +1,45 @@
+# Render blueprint. The free instance type has no persistent disk and sleeps
+# after 15 minutes idle (the next request wakes it, taking ~30-60s) — both are
+# fine here because all state lives in Supabase, and neither costs anything.
+#
+# Secrets are deliberately marked `sync: false`: Render prompts for them once in
+# the dashboard instead of keeping them in this file, which is committed.
+services:
+  - type: web
+    name: optiary
+    runtime: node
+    plan: free
+    region: singapore
+    # `npm install`, not `npm ci`: package-lock.json is gitignored here (bun.lock
+    # is the checked-in lockfile), and `npm ci` refuses to run without it.
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/auth/config
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "24"
+      # Render supplies PORT; config.ts already reads it.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      # Comma-separated guest list. Without it, anyone with a Google account can
+      # sign in to the deployed app and spend your AI credit.
+      - key: ALLOWED_EMAILS
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_BASE_URL
+        value: https://openrouter.ai/api
+      - key: ANTHROPIC_MODEL
+        value: z-ai/glm-5.3-flash
+      # WEB_ORIGIN and API_ORIGIN must both be the deployed URL, or OAuth
+      # redirects and CORS will point back at localhost.
+      - key: WEB_ORIGIN
+        sync: false
+      - key: API_ORIGIN
+        sync: false

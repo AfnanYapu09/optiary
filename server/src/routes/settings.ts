@@ -45,14 +45,14 @@ function sanitise(current: UserSettings, patch: unknown): UserSettings {
   return next;
 }
 
-settingsRoutes.put("/settings", (req, res) => {
+settingsRoutes.put("/settings", async (req, res) => {
   const next = sanitise(req.user!.settings, req.body?.settings ?? req.body);
-  updateSettings(req.user!.id, next);
-  res.json({ settings: getUser(req.user!.id)?.settings ?? next });
+  await updateSettings(req.user!.id, next);
+  res.json({ settings: (await getUser(req.user!.id))?.settings ?? next });
 });
 
-settingsRoutes.post("/settings/reset", (req, res) => {
+settingsRoutes.post("/settings/reset", async (req, res) => {
   const next = defaultSettings();
-  updateSettings(req.user!.id, next);
+  await updateSettings(req.user!.id, next);
   res.json({ settings: next });
 });

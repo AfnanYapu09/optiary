@@ -98,7 +98,7 @@ export async function extractSlotMetrics(
   const imagesData: Array<{ kind: ImageKind; data: string; mime: string }> = [];
 
   for (const kind of IMAGE_KINDS) {
-    const image = readImageBase64(userId, date, slot, kind);
+    const image = await readImageBase64(userId, date, slot, kind);
     if (!image) continue;
     present.push(kind);
     imagesData.push({ kind, data: image.data, mime: image.mime });

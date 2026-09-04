@@ -16,8 +16,6 @@ export const config = {
   /** Public origin of this API, used to build the OAuth redirect URI. */
   apiOrigin: process.env.API_ORIGIN ?? `http://localhost:${process.env.PORT ?? 3000}`,
 
-  dataDir: process.env.DATA_DIR ?? path.join(root, "data"),
-
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
@@ -84,23 +82,22 @@ export const firebaseAuthConfigured = Boolean(firebaseProjectId);
 export const googleConfigured = googleOauthConfigured || firebaseAuthConfigured;
 
 
-fs.mkdirSync(config.dataDir, { recursive: true });
-fs.mkdirSync(path.join(config.dataDir, "uploads"), { recursive: true });
-
 /**
  * A stable secret is required to sign session cookies. In production it must be
  * supplied; in development we persist a generated one so restarts don't log you out.
+ *
+ * The development file is the only thing this server still keeps on disk —
+ * research data and screenshots live in Supabase, so a deployed instance runs
+ * fine on a host whose filesystem is wiped between restarts.
  */
 export function resolveSessionSecret(): string {
   if (config.sessionSecret) return config.sessionSecret;
   if (process.env.NODE_ENV === "production") {
     throw new Error("SESSION_SECRET must be set in production");
   }
-  const file = path.join(config.dataDir, ".session-secret");
+  const file = path.join(root, ".session-secret");
   if (fs.existsSync(file)) return fs.readFileSync(file, "utf8").trim();
   const generated = crypto.randomBytes(32).toString("hex");
   fs.writeFileSync(file, generated, { mode: 0o600 });
   return generated;
 }
-
-export const uploadsDir = path.join(config.dataDir, "uploads");
