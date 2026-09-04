@@ -2,6 +2,7 @@ import { Router } from "express";
 import { config, firebaseAuthConfigured, googleOauthConfigured } from "../config.js";
 import {
   clearSessionCookie,
+  EmailNotAllowedError,
   exchangeGoogleCode,
   googleAuthUrl,
   googleConfigured,
@@ -53,7 +54,7 @@ authRoutes.post("/auth/firebase-login", async (req, res) => {
   }
   try {
     const identity = await verifyFirebaseIdToken(req.body?.idToken);
-    const user = upsertGoogleUser({
+    const user = await upsertGoogleUser({
       sub: identity.sub,
       email: identity.email,
       name: identity.name ?? identity.email.split("@")[0],
@@ -63,6 +64,10 @@ authRoutes.post("/auth/firebase-login", async (req, res) => {
     setSessionCookie(res, user.id);
     res.json({ user, token, slots: SLOTS });
   } catch (error) {
+    if (error instanceof EmailNotAllowedError) {
+      res.status(403).json({ error: "บัญชีนี้ไม่ได้รับอนุญาตให้เข้าใช้งาน" });
+      return;
+    }
     if (error instanceof FirebaseTokenError) {
       res.status(401).json({ error: error.message });
       return;
@@ -94,10 +99,14 @@ authRoutes.get("/auth/google/callback", async (req, res) => {
   }
   try {
     const profile = await exchangeGoogleCode(code);
-    const user = upsertGoogleUser(profile);
+    const user = await upsertGoogleUser(profile);
     setSessionCookie(res, user.id);
     res.redirect(`${config.webOrigin}${state.returnTo}`);
   } catch (error) {
+    if (error instanceof EmailNotAllowedError) {
+      res.redirect(`${config.webOrigin}/login?error=not_allowed`);
+      return;
+    }
     console.error("google callback failed", error);
     res.redirect(`${config.webOrigin}/login?error=exchange`);
   }
@@ -107,7 +116,7 @@ authRoutes.get("/auth/google/callback", async (req, res) => {
  * Local sign-in for development and for evaluating the app before Google
  * credentials exist. Disabled in production by `ALLOW_DEV_LOGIN`.
  */
-authRoutes.post("/auth/dev-login", (req, res) => {
+authRoutes.post("/auth/dev-login", async (req, res) => {
   if (!config.allowDevLogin) {
     res.status(403).json({ error: "dev_login_disabled" });
     return;
@@ -116,7 +125,7 @@ authRoutes.post("/auth/dev-login", (req, res) => {
     ? req.body.email
     : "demo@optiary.local";
   const name = typeof req.body?.name === "string" && req.body.name.trim() ? req.body.name : "นักวิจัย (เดโม)";
-  const user = upsertLocalUser(email, name);
+  const user = await upsertLocalUser(email, name);
   const token = issueToken(user.id);
   setSessionCookie(res, user.id);
   res.json({ user, token });

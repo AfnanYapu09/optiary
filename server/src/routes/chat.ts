@@ -3,7 +3,7 @@ import multer from "multer";
 import type Anthropic from "@anthropic-ai/sdk";
 import { config } from "../config.js";
 import { requireUser } from "../auth.js";
-import { db, nowIso, uid } from "../db.js";
+import { supabase, nowIso, uid } from "../db.js";
 import { isDateString, isSlotId } from "../domain.js";
 import { streamChat, type ChatAttachment } from "../ai/chat.js";
 import { describeAiError } from "../ai/client.js";
@@ -41,21 +41,26 @@ function threadFor(raw: unknown): string {
   return isDateString(value) ? value : "global";
 }
 
-function loadThread(userId: string, thread: string, limit = 40): MessageRow[] {
-  const rows = db
-    .prepare(
-      `SELECT id, role, content, meta, created_at FROM messages
-       WHERE user_id = ? AND thread = ? ORDER BY created_at DESC, rowid DESC LIMIT ?`,
-    )
-    .all(userId, thread, limit) as MessageRow[];
-  return rows.reverse();
+// `rowid` was the tiebreaker under SQLite; Postgres has no such column, so the
+// id breaks ties between two messages written in the same millisecond.
+async function loadThread(userId: string, thread: string, limit = 40): Promise<MessageRow[]> {
+  const { data } = await supabase
+    .from("messages")
+    .select("id, role, content, meta, created_at")
+    .eq("user_id", userId)
+    .eq("thread", thread)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit);
+  return ((data ?? []) as MessageRow[]).reverse();
 }
 
-chatRoutes.get("/chat/:thread", (req, res) => {
+chatRoutes.get("/chat/:thread", async (req, res) => {
   const thread = threadFor(req.params.thread);
+  const messages = await loadThread(req.user!.id, thread);
   res.json({
     thread,
-    messages: loadThread(req.user!.id, thread).map((m) => ({
+    messages: messages.map((m) => ({
       id: m.id,
       role: m.role,
       content: m.content,
@@ -65,31 +70,43 @@ chatRoutes.get("/chat/:thread", (req, res) => {
   });
 });
 
-chatRoutes.delete("/chat/:thread", (req, res) => {
+chatRoutes.delete("/chat/:thread", async (req, res) => {
   const thread = threadFor(req.params.thread);
   const userId = req.user!.id;
-  // Chat images live on disk keyed by message, so clear them with the transcript.
-  const ids = db
-    .prepare(
-      `SELECT ca.id AS id FROM chat_attachments ca
-       JOIN messages m ON m.id = ca.message_id
-       WHERE ca.user_id = ? AND m.thread = ?`,
-    )
-    .all(userId, thread) as Array<{ id: string }>;
-  for (const { id } of ids) deleteChatAttachment(userId, id);
-  db.prepare("DELETE FROM messages WHERE user_id = ? AND thread = ?").run(userId, thread);
+
+  // Chat images are stored objects keyed by message, so clear them with the
+  // transcript. PostgREST cannot join, so the message ids are resolved first.
+  const { data: messageRows } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("thread", thread);
+  const messageIds = ((messageRows ?? []) as Array<{ id: string }>).map((m) => m.id);
+
+  if (messageIds.length) {
+    const { data: attachmentRows } = await supabase
+      .from("chat_attachments")
+      .select("id")
+      .eq("user_id", userId)
+      .in("message_id", messageIds);
+    for (const { id } of (attachmentRows ?? []) as Array<{ id: string }>) {
+      await deleteChatAttachment(userId, id);
+    }
+  }
+
+  await supabase.from("messages").delete().eq("user_id", userId).eq("thread", thread);
   res.json({ ok: true });
 });
 
-chatRoutes.get("/chat-image/:id/file", (req, res) => {
-  const file = getChatAttachmentFile(req.user!.id, String(req.params.id ?? ""));
+chatRoutes.get("/chat-image/:id/file", async (req, res) => {
+  const file = await getChatAttachmentFile(req.user!.id, String(req.params.id ?? ""));
   if (!file) {
     res.status(404).json({ error: "not_found" });
     return;
   }
   res.setHeader("Content-Type", file.mime);
   res.setHeader("Cache-Control", "private, max-age=31536000, immutable");
-  res.sendFile(file.absolutePath);
+  res.send(file.data);
 });
 
 /**
@@ -117,22 +134,21 @@ chatRoutes.post("/chat", chatUpload.array("files") as any, async (req, res) => {
   const storedContent = attachments.length
     ? message || "ช่วยอ่านภาพนี้แล้วจดให้หน่อย"
     : message;
-  const storedAttachments = attachments.map((file) =>
-    storeChatAttachment(userId, userMessageId, file),
+  const storedAttachments = await Promise.all(
+    attachments.map((file) => storeChatAttachment(userId, userMessageId, file)),
   );
 
-  db.prepare(
-    "INSERT INTO messages (id, user_id, thread, role, content, meta, created_at) VALUES (?, ?, ?, 'user', ?, ?, ?)",
-  ).run(
-    userMessageId,
-    userId,
+  await supabase.from("messages").insert({
+    id: userMessageId,
+    user_id: userId,
     thread,
-    storedContent,
-    JSON.stringify({ attachments: storedAttachments }),
-    nowIso(),
-  );
+    role: "user",
+    content: storedContent,
+    meta: JSON.stringify({ attachments: storedAttachments }),
+    created_at: nowIso(),
+  });
 
-  const history: Anthropic.MessageParam[] = loadThread(userId, thread).map((m) => ({
+  const history: Anthropic.MessageParam[] = (await loadThread(userId, thread)).map((m) => ({
     role: m.role === "assistant" ? "assistant" : "user",
     content: m.content,
   }));
@@ -193,9 +209,15 @@ chatRoutes.post("/chat", chatUpload.array("files") as any, async (req, res) => {
   }
 
   if (answer.trim()) {
-    db.prepare(
-      "INSERT INTO messages (id, user_id, thread, role, content, meta, created_at) VALUES (?, ?, ?, 'assistant', ?, ?, ?)",
-    ).run(uid(), userId, thread, answer, JSON.stringify({ savedNotes, stats }), nowIso());
+    await supabase.from("messages").insert({
+      id: uid(),
+      user_id: userId,
+      thread,
+      role: "assistant",
+      content: answer,
+      meta: JSON.stringify({ savedNotes, stats }),
+      created_at: nowIso(),
+    });
   }
 
   send({ type: "end" });

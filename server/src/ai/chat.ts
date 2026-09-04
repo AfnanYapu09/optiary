@@ -37,7 +37,7 @@ import {
   updateSettings,
 } from "../store.js";
 import { getUser } from "../auth.js";
-import { db } from "../db.js";
+import { supabase } from "../db.js";
 
 const THAI_WEEKDAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
@@ -758,13 +758,13 @@ export function guardDate(guard: RunGuard, name: string, date: string): string |
   return null;
 }
 
-function runTool(
+async function runTool(
   userId: string,
   name: string,
   input: Record<string, unknown>,
   attachments: ChatAttachment[],
   guard: RunGuard,
-): ToolOutcome {
+): Promise<ToolOutcome> {
   // save_news carries its dates inside days[], so it is checked in its own case.
   if (WRITES_A_DATE.has(name) && name !== "save_news") {
     const blocked = guardDate(guard, name, String(input.date ?? ""));
@@ -774,7 +774,7 @@ function runTool(
   switch (name) {
     case "get_day": {
       const date = String(input.date ?? "");
-      const day = getDay(userId, date);
+      const day = await getDay(userId, date);
       return {
         result: {
           date,
@@ -794,30 +794,35 @@ function runTool(
       const query = String(input.query ?? "").trim();
       const slot = String(input.slot ?? "").trim();
       const limit = Math.min(Math.max(Number(input.limit ?? 10) || 10, 1), 40);
-      const clauses = ["user_id = ?"];
-      const params: Array<string | number> = [userId];
-      if (query) {
-        clauses.push("(note LIKE ? OR tags LIKE ?)");
-        params.push(`%${query}%`, `%${query}%`);
-      }
-      if (slot && isSlotId(slot)) {
-        clauses.push("slot = ?");
-        params.push(slot);
-      }
-      params.push(limit);
-      const rows = db
-        .prepare(
-          `SELECT date, slot, note, tags, metrics FROM entries
-           WHERE ${clauses.join(" AND ")} AND (note != '' OR metrics != '{}')
-           ORDER BY date DESC LIMIT ?`,
-        )
-        .all(...params) as Array<{
+
+      // Only the fixed columns are filtered in the query. `query` is model-supplied
+      // text, and PostgREST's `.or()` takes a filter *expression* as a string, so
+      // interpolating it there would let a note like `a,note.neq.x` rewrite the
+      // filter. Matching therefore happens in JS, over one bounded page.
+      let rowQuery = supabase
+        .from("entries")
+        .select("date, slot, note, tags, metrics")
+        .eq("user_id", userId);
+      if (slot && isSlotId(slot)) rowQuery = rowQuery.eq("slot", slot);
+      const { data } = await rowQuery.order("date", { ascending: false }).limit(2000);
+
+      const needle = query.toLowerCase();
+      const rows = ((data ?? []) as Array<{
         date: string;
         slot: string;
         note: string;
         tags: string;
         metrics: string;
-      }>;
+      }>)
+        .filter((r) => r.note !== "" || r.metrics !== "{}")
+        .filter(
+          (r) =>
+            !needle ||
+            r.note.toLowerCase().includes(needle) ||
+            r.tags.toLowerCase().includes(needle),
+        )
+        .slice(0, limit);
+
       return {
         result: rows.map((r) => ({
           date: r.date,
@@ -830,7 +835,8 @@ function runTool(
     }
     case "get_stats": {
       const days = Math.min(Math.max(Number(input.days ?? 30) || 30, 1), 90);
-      return { result: { series: getSeries(userId, days), streak: getStreak(userId) } };
+      const [series, streak] = await Promise.all([getSeries(userId, days), getStreak(userId)]);
+      return { result: { series, streak } };
     }
     case "resolve_date": {
       const month = Number(input.month);
@@ -857,7 +863,7 @@ function runTool(
       const text = String(input.text ?? "").trim();
       if (!text) return { result: { error: "ข้อความว่าง" } };
       const tag = String(input.tag ?? "").trim() || undefined;
-      const entry = appendNote(userId, date, slotRaw, text, tag);
+      const entry = await appendNote(userId, date, slotRaw, text, tag);
       return {
         result: { saved: true, date, slot: slotRaw, note: entry.note, tags: entry.tags },
         sideEffect: { type: "note-saved", date, slot: slotRaw },
@@ -875,7 +881,7 @@ function runTool(
       if (!file) {
         return { result: { error: `ไม่พบภาพลำดับที่ ${index} — มีภาพแนบมา ${attachments.length} ภาพ` } };
       }
-      const image = storeImage(userId, date, slotRaw, kindRaw, {
+      const image = await storeImage(userId, date, slotRaw, kindRaw, {
         buffer: file.buffer,
         mimetype: file.mime,
         originalname: file.originalname,
@@ -903,7 +909,7 @@ function runTool(
       };
       // `extractedFrom` must describe the shots actually on file for the slot,
       // not whatever an earlier extraction happened to leave behind.
-      const slotRow = getDay(userId, date).slots.find((s) => s.slot === slotRaw)!;
+      const slotRow = (await getDay(userId, date)).slots.find((s) => s.slot === slotRaw)!;
       const metrics = {
         priceClose: num(input.price_close),
         intradayPut: num(input.intraday_put),
@@ -921,7 +927,7 @@ function runTool(
         extractedAt: new Date().toISOString(),
         extractedFrom: Object.keys(slotRow.images) as ImageKind[],
       };
-      saveEntry(userId, date, slotRaw, { metrics });
+      await saveEntry(userId, date, slotRaw, { metrics });
       return {
         result: { saved: true, date, slot: slotRaw, metrics },
         sideEffect: { type: "metrics-saved", date, slot: slotRaw },
@@ -967,7 +973,7 @@ function runTool(
           }))
           .filter((e) => e.title);
         if (!events.length) continue;
-        saveDayNews(userId, date, { events });
+        await saveDayNews(userId, date, { events });
         saved.push({ date, count: events.length });
         effects.push({ type: "data-changed", date });
       }
@@ -976,7 +982,7 @@ function runTool(
       const wsDate = String(ws?.date ?? "");
       const wsText = String(ws?.text ?? "").trim();
       if (ws && isDateString(wsDate) && wsText) {
-        saveDayNews(userId, wsDate, { weekSummary: wsText });
+        await saveDayNews(userId, wsDate, { weekSummary: wsText });
         week = { date: wsDate };
         effects.push({ type: "data-changed", date: wsDate });
       }
@@ -986,11 +992,11 @@ function runTool(
       return { result: { saved, week }, sideEffect: effects };
     }
     case "list_days": {
-      const dates = listDataDates(userId);
+      const dates = await listDataDates(userId);
       return { result: { count: dates.length, dates } };
     }
     case "get_settings": {
-      const s = getUser(userId)?.settings;
+      const s = (await getUser(userId))?.settings;
       if (!s) return { result: { error: "อ่านการตั้งค่าไม่สำเร็จ" } };
       return {
         result: {
@@ -1011,8 +1017,8 @@ function runTool(
       if (!text) return { result: { error: "ข้อความว่าง" } };
       const entry =
         input.replace === true
-          ? saveEntry(userId, date, slotRaw, { note: text })
-          : appendNote(userId, date, slotRaw, text);
+          ? await saveEntry(userId, date, slotRaw, { note: text })
+          : await appendNote(userId, date, slotRaw, text);
       return {
         result: { saved: true, date, slot: slotRaw, note: entry.note, replaced: input.replace === true },
         sideEffect: { type: "note-saved", date, slot: slotRaw },
@@ -1026,14 +1032,14 @@ function runTool(
       const tags = Array.isArray(input.tags)
         ? [...new Set(input.tags.map((t) => String(t).trim()).filter(Boolean))].slice(0, 20)
         : [];
-      const entry = saveEntry(userId, date, slotRaw, { tags });
+      const entry = await saveEntry(userId, date, slotRaw, { tags });
       return {
         result: { saved: true, date, slot: slotRaw, tags: entry.tags },
         sideEffect: { type: "note-saved", date, slot: slotRaw },
       };
     }
     case "update_settings": {
-      const user = getUser(userId);
+      const user = await getUser(userId);
       if (!user) return { result: { error: "ไม่พบผู้ใช้" } };
       const next = { ...user.settings, slots: { ...user.settings.slots } };
       const changed: string[] = [];
@@ -1062,7 +1068,7 @@ function runTool(
         changed.push(`ปิด ${id}`);
       }
       if (changed.length === 0) return { result: { error: "ไม่มีอะไรให้เปลี่ยน" } };
-      updateSettings(userId, next);
+      await updateSettings(userId, next);
       return { result: { saved: true, changed }, sideEffect: { type: "settings-changed" } };
     }
     case "delete_data": {
@@ -1076,7 +1082,9 @@ function runTool(
         if (!isDateString(date) || !isSlotId(slotRaw) || !isImageKind(kindRaw)) {
           return { result: { error: "ต้องระบุ date, slot และ kind ให้ถูกต้องสำหรับการลบภาพ" } };
         }
-        const exists = Boolean(getDay(userId, date).slots.find((s) => s.slot === slotRaw)?.images[kindRaw]);
+        const exists = Boolean(
+          (await getDay(userId, date)).slots.find((s) => s.slot === slotRaw)?.images[kindRaw],
+        );
         if (!exists) return { result: { error: `ไม่มีภาพ ${kindRaw} ของ ${date} ช่วง ${slotRaw}` } };
         if (!confirmed) {
           return {
@@ -1087,7 +1095,7 @@ function runTool(
             },
           };
         }
-        deleteImageAt(userId, date, slotRaw, kindRaw);
+        await deleteImageAt(userId, date, slotRaw, kindRaw);
         return {
           result: { deleted: true, scope, date, slot: slotRaw, kind: kindRaw },
           sideEffect: { type: "data-changed", date, slot: slotRaw },
@@ -1098,7 +1106,7 @@ function runTool(
         if (!isDateString(date) || !isSlotId(slotRaw)) {
           return { result: { error: "ต้องระบุ date และ slot ให้ถูกต้อง" } };
         }
-        const fp = slotFootprint(userId, date, slotRaw);
+        const fp = await slotFootprint(userId, date, slotRaw);
         if (!confirmed) {
           return {
             result: {
@@ -1108,7 +1116,7 @@ function runTool(
             },
           };
         }
-        const { images } = clearSlot(userId, date, slotRaw, { images: true });
+        const { images } = await clearSlot(userId, date, slotRaw, { images: true });
         return {
           result: { deleted: true, scope, date, slot: slotRaw, imagesRemoved: images },
           sideEffect: { type: "data-changed", date, slot: slotRaw },
@@ -1117,7 +1125,7 @@ function runTool(
 
       if (scope === "day") {
         if (!isDateString(date)) return { result: { error: "ต้องระบุ date ให้ถูกต้อง" } };
-        const fp = dayFootprint(userId, date);
+        const fp = await dayFootprint(userId, date);
         if (!confirmed) {
           return {
             result: {
@@ -1127,7 +1135,7 @@ function runTool(
             },
           };
         }
-        const res = deleteDay(userId, date);
+        const res = await deleteDay(userId, date);
         return {
           result: { deleted: true, scope, date, ...res },
           sideEffect: { type: "data-changed", date },
@@ -1135,7 +1143,7 @@ function runTool(
       }
 
       if (scope === "everything") {
-        const fp = dataFootprint(userId);
+        const fp = await dataFootprint(userId);
         // A full wipe needs both flags — an accidental `confirm:true` alone
         // cannot trigger it.
         const phraseOk = String(input.confirm_phrase ?? "").trim() === "ลบข้อมูลวิจัยทั้งหมด";
@@ -1148,7 +1156,7 @@ function runTool(
             },
           };
         }
-        const res = deleteAllData(userId);
+        const res = await deleteAllData(userId);
         return { result: { deleted: true, scope, ...res }, sideEffect: { type: "data-changed" } };
       }
 
@@ -1332,7 +1340,13 @@ export async function* streamChat(
       for (const fc of functionCalls) {
         yield { type: "tool", name: fc.name };
         try {
-          const outcome = runTool(userId, fc.name, fc.args as Record<string, unknown>, attachments, guard);
+          const outcome = await runTool(
+            userId,
+            fc.name,
+            fc.args as Record<string, unknown>,
+            attachments,
+            guard,
+          );
           if (outcome.sideEffect) for (const se of ([] as ToolSideEffect[]).concat(outcome.sideEffect)) yield se;
           functionResponseParts.push({
             functionResponse: {
@@ -1442,7 +1456,13 @@ export async function* streamChat(
       if (block.type !== "tool_use") continue;
       yield { type: "tool", name: block.name };
       try {
-        const outcome = runTool(userId, block.name, block.input as Record<string, unknown>, attachments, guard);
+        const outcome = await runTool(
+          userId,
+          block.name,
+          block.input as Record<string, unknown>,
+          attachments,
+          guard,
+        );
         if (outcome.sideEffect) for (const se of ([] as ToolSideEffect[]).concat(outcome.sideEffect)) yield se;
         toolResults.push({
           type: "tool_result",

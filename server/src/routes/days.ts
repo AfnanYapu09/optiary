@@ -7,25 +7,29 @@ export const dayRoutes = Router();
 
 dayRoutes.use(["/calendar", "/days", "/days/*"], requireUser);
 
-dayRoutes.get("/calendar", (req, res) => {
+dayRoutes.get("/calendar", async (req, res) => {
   const month = typeof req.query.month === "string" ? req.query.month : "";
   if (!/^\d{4}-\d{2}$/.test(month)) {
     res.status(400).json({ error: "month must be YYYY-MM" });
     return;
   }
-  res.json({ month, days: getCalendar(req.user!.id, month), streak: getStreak(req.user!.id) });
+  const [days, streak] = await Promise.all([
+    getCalendar(req.user!.id, month),
+    getStreak(req.user!.id),
+  ]);
+  res.json({ month, days, streak });
 });
 
-dayRoutes.get("/days/:date", (req, res) => {
+dayRoutes.get("/days/:date", async (req, res) => {
   const date = String(req.params.date ?? "");
   if (!isDateString(date)) {
     res.status(400).json({ error: "date must be YYYY-MM-DD" });
     return;
   }
-  res.json(getDay(req.user!.id, date));
+  res.json(await getDay(req.user!.id, date));
 });
 
-dayRoutes.put("/days/:date/:slot", (req, res) => {
+dayRoutes.put("/days/:date/:slot", async (req, res) => {
   const date = String(req.params.date ?? "");
   const slot = String(req.params.slot ?? "");
   if (!isDateString(date) || !isSlotId(slot)) {
@@ -39,5 +43,5 @@ dayRoutes.put("/days/:date/:slot", (req, res) => {
   const metrics =
     req.body?.metrics && typeof req.body.metrics === "object" ? req.body.metrics : undefined;
 
-  res.json(saveEntry(req.user!.id, date, slot, { note, tags, metrics }));
+  res.json(await saveEntry(req.user!.id, date, slot, { note, tags, metrics }));
 });

@@ -6,6 +6,8 @@ package-lock.json
 .env
 .env.local
 
-# Runtime state: SQLite database, uploaded screenshots, generated dev secret.
+# Runtime state. Research data now lives in Supabase; server/data/ is only the
+# leftover local SQLite database kept around for the one-off migration.
 server/data/
+.session-secret
 *.tsbuildinfo

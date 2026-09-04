@@ -5,7 +5,6 @@ import cookieParser from "cookie-parser";
 import { config } from "./config.js";
 import { attachUser } from "./auth.js";
 import { api } from "./routes/index.js";
-import { seedIfEmpty } from "./seed.js";
 
 const app = express();
 
@@ -47,13 +46,6 @@ function getWebDist(): string {
 }
 
 async function startServer() {
-  // Ensure database has demo data if first run
-  try {
-    seedIfEmpty();
-  } catch (err) {
-    console.warn("Could not auto-seed demo data:", err);
-  }
-
   if (process.env.NODE_ENV !== "production") {
     const webRoot = getWebRoot();
     const { createServer: createViteServer } = await (Function('return import("vite")')() as Promise<any>);
@@ -72,6 +64,14 @@ async function startServer() {
       app.use(express.static(webDist));
       app.get("*", (_req, res) => res.sendFile(path.join(webDist, "index.html")));
     }
+  }
+
+  // Forgetting the guest list on a public deployment is silent and expensive:
+  // any Google account can sign in and spend the owner's AI credit.
+  if (process.env.NODE_ENV === "production" && !process.env.ALLOWED_EMAILS?.trim()) {
+    console.warn(
+      "WARNING: ALLOWED_EMAILS is empty — anyone with a Google account can sign in and use this instance's AI credit.",
+    );
   }
 
   app.listen(config.port, "0.0.0.0", () => {

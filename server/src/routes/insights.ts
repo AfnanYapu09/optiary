@@ -32,10 +32,12 @@ function correlation(xs: number[], ys: number[]): number | null {
   return num / Math.sqrt(dx * dy);
 }
 
-insightRoutes.get("/stats", (req, res) => {
+insightRoutes.get("/stats", async (req, res) => {
   const days = Math.min(Math.max(Number(req.query.days ?? 30) || 30, 1), 365);
-  const series = getSeries(req.user!.id, days);
-  const streak = getStreak(req.user!.id);
+  const [series, streak] = await Promise.all([
+    getSeries(req.user!.id, days),
+    getStreak(req.user!.id),
+  ]);
 
   const bySlot = SLOTS.map((def) => {
     const points = series.filter((p) => p.slot === def.id);
@@ -67,7 +69,7 @@ insightRoutes.get("/stats", (req, res) => {
 });
 
 /** Two (date, slot) pairs side by side, with the numeric deltas between them. */
-insightRoutes.get("/compare", (req, res) => {
+insightRoutes.get("/compare", async (req, res) => {
   const parse = (raw: unknown): { date: string; slot: SlotId } | null => {
     if (typeof raw !== "string") return null;
     const [date, slot] = raw.split("_");
@@ -82,11 +84,10 @@ insightRoutes.get("/compare", (req, res) => {
     return;
   }
 
-  const pick = (target: { date: string; slot: SlotId }) =>
-    getDay(req.user!.id, target.date).slots.find((s) => s.slot === target.slot)!;
+  const pick = async (target: { date: string; slot: SlotId }) =>
+    (await getDay(req.user!.id, target.date)).slots.find((s) => s.slot === target.slot)!;
 
-  const a = pick(left);
-  const b = pick(right);
+  const [a, b] = await Promise.all([pick(left), pick(right)]);
 
   const delta = (
     key:
@@ -129,8 +130,8 @@ insightRoutes.get("/compare", (req, res) => {
   });
 });
 
-insightRoutes.get("/export.csv", (req, res) => {
-  const series = getSeries(req.user!.id, 3650);
+insightRoutes.get("/export.csv", async (req, res) => {
+  const series = await getSeries(req.user!.id, 3650);
   const escape = (v: unknown) => {
     const s = v === null || v === undefined ? "" : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -138,9 +139,11 @@ insightRoutes.get("/export.csv", (req, res) => {
   const header = ["date", "slot", "price_close", "oi_total", "oi_chg", "pc_ratio", "note", "tags"];
   const lines = [header.join(",")];
 
-  const noteCache = new Map<string, ReturnType<typeof getDay>>();
+  const noteCache = new Map<string, Awaited<ReturnType<typeof getDay>>>();
   for (const point of series) {
-    if (!noteCache.has(point.date)) noteCache.set(point.date, getDay(req.user!.id, point.date));
+    if (!noteCache.has(point.date)) {
+      noteCache.set(point.date, await getDay(req.user!.id, point.date));
+    }
     const entry = noteCache.get(point.date)!.slots.find((s) => s.slot === point.slot)!;
     lines.push(
       [
