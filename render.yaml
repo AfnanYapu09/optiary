@@ -12,7 +12,12 @@ services:
     region: singapore
     # `npm install`, not `npm ci`: package-lock.json is gitignored here (bun.lock
     # is the checked-in lockfile), and `npm ci` refuses to run without it.
-    buildCommand: npm install && npm run build
+    #
+    # `--include=dev` is required because NODE_ENV=production below makes npm
+    # omit devDependencies, and the build needs them: typescript, vite and
+    # @types/react all live there. Without it the web build fails with
+    # TS7026 (no JSX.IntrinsicElements) once tsc runs without React's types.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/auth/config
     envVars:
