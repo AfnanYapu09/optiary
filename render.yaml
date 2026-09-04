@@ -41,7 +41,7 @@ services:
       - key: ANTHROPIC_BASE_URL
         value: https://openrouter.ai/api
       - key: ANTHROPIC_MODEL
-        value: z-ai/glm-5.3-flash
+        value: meta/muse-spark-1.3-contributor
       # WEB_ORIGIN and API_ORIGIN must both be the deployed URL, or OAuth
       # redirects and CORS will point back at localhost.
       - key: WEB_ORIGIN
