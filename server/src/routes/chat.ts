@@ -98,6 +98,51 @@ chatRoutes.delete("/chat/:thread", async (req, res) => {
   res.json({ ok: true });
 });
 
+/**
+ * Deletes `messageId` and everything after it in the thread.
+ *
+ * Editing a question or retrying an answer rewrites the conversation from that
+ * point, and the replies that followed were answering the old text — leaving
+ * them would put a reply to a question that no longer exists in the transcript,
+ * and the model would then be fed that contradiction as history. The images
+ * those turns owned go too, so nothing is orphaned in the bucket.
+ */
+chatRoutes.delete("/chat/:thread/from/:messageId", async (req, res) => {
+  const thread = threadFor(req.params.thread);
+  const userId = req.user!.id;
+  const messageId = String(req.params.messageId ?? "");
+
+  // "After" follows the same ordering the transcript is read with, so what the
+  // user sees below a message is exactly what disappears.
+  const { data } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("thread", thread)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  const ordered = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+  const cut = ordered.indexOf(messageId);
+  if (cut === -1) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  const doomed = ordered.slice(cut);
+
+  const { data: attachmentRows } = await supabase
+    .from("chat_attachments")
+    .select("id")
+    .eq("user_id", userId)
+    .in("message_id", doomed);
+  for (const { id } of (attachmentRows ?? []) as Array<{ id: string }>) {
+    await deleteChatAttachment(userId, id);
+  }
+
+  await supabase.from("messages").delete().eq("user_id", userId).in("id", doomed);
+  res.json({ ok: true, removed: doomed.length });
+});
+
 chatRoutes.get("/chat-image/:id/file", async (req, res) => {
   const file = await getChatAttachmentFile(req.user!.id, String(req.params.id ?? ""));
   if (!file) {

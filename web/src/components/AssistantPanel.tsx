@@ -64,6 +64,41 @@ const StopIcon = () => (
   </svg>
 );
 
+const RetryIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M20 11A8 8 0 1 0 18 16.5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path d="M20 5v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M4 20h4L19 9a2.5 2.5 0 0 0-4-4L4 16v4Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CopyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="9" y="9" width="11" height="11" rx="2.5" stroke="currentColor" strokeWidth="2" />
+    <path
+      d="M5 15V6a2 2 0 0 1 2-2h8"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 /** "z-ai/glm-5.3-flash" -> "GLM 5.3 Flash" · "gemini-3.6-flash" -> "Gemini 3.6 Flash" */
 function prettyModel(model: string): string {
   const tail = model.split("/").pop() ?? model;
@@ -98,6 +133,9 @@ export default function AssistantPanel({
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [elapsed, setElapsed] = useState(0);
+  // Which user turn is open for editing, and the text being edited in it.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
 
   // The turn itself lives above the router, so leaving this page mid-answer no
   // longer cancels it — coming back re-attaches to the same live stream.
@@ -262,6 +300,48 @@ export default function AssistantPanel({
     }
   }, [initialQuestion, send]);
 
+  const copyMessage = useCallback(
+    async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("คัดลอกแล้ว", "ok");
+      } catch {
+        toast("คัดลอกไม่สำเร็จ", "err");
+      }
+    },
+    [toast],
+  );
+
+  /**
+   * Replays the thread from `messageId` with `text` as the question — the shared
+   * path behind both editing a turn and retrying it.
+   *
+   * The old turn and everything after it is dropped first: the replies below it
+   * were answering the previous wording, so keeping them would leave the
+   * transcript self-contradicting and feed that contradiction back as history.
+   */
+  const resendFrom = useCallback(
+    async (messageId: string, text: string) => {
+      const question = text.trim();
+      if (!question || streaming) return;
+
+      const previous = messages;
+      const cut = messages.findIndex((m) => m.id === messageId);
+      if (cut >= 0) setMessages(messages.slice(0, cut));
+      setEditingId(null);
+
+      try {
+        await api.truncateChatFrom(thread, messageId);
+      } catch {
+        setMessages(previous);
+        toast("ย้อนประวัติแชทไม่สำเร็จ", "err");
+        return;
+      }
+      await send(question);
+    },
+    [messages, send, streaming, thread, toast],
+  );
+
   return (
     <div className="assistant">
       <header className="assistant-head">
@@ -302,24 +382,97 @@ export default function AssistantPanel({
             .filter((u): u is string => Boolean(u));
           return message.role === "user" ? (
             <div key={message.id} className="turn user">
-              <div className="bubble user">
-                {shots.length ? (
-                  <div className="bubble-shots">
-                    {shots.map((url, i) => (
-                      <button
-                        key={url}
-                        type="button"
-                        className="bubble-shot"
-                        onClick={() => openLightbox(shots, i)}
-                        aria-label="ดูรูปเต็ม"
-                      >
-                        <img src={url} alt="ภาพที่แนบ" />
-                      </button>
-                    ))}
+              {editingId === message.id ? (
+                <div className="bubble user editing">
+                  <textarea
+                    className="bubble-edit"
+                    value={editDraft}
+                    autoFocus
+                    rows={Math.min(10, editDraft.split("\n").length + 1)}
+                    onChange={(event) => setEditDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") setEditingId(null);
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        void resendFrom(message.id, editDraft);
+                      }
+                    }}
+                  />
+                  {shots.length ? (
+                    <p className="bubble-edit-note">
+                      ภาพที่แนบมาเดิม {shots.length} ภาพจะไม่ถูกส่งไปด้วย
+                    </p>
+                  ) : null}
+                  <div className="bubble-edit-row">
+                    <button type="button" className="chip" onClick={() => setEditingId(null)}>
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="button"
+                      className="chip gold"
+                      disabled={!editDraft.trim() || streaming}
+                      onClick={() => void resendFrom(message.id, editDraft)}
+                    >
+                      ส่งใหม่
+                    </button>
                   </div>
-                ) : null}
-                {message.content ? <p>{message.content}</p> : null}
-              </div>
+                </div>
+              ) : (
+                <>
+                  <div className="bubble user">
+                    {shots.length ? (
+                      <div className="bubble-shots">
+                        {shots.map((url, i) => (
+                          <button
+                            key={url}
+                            type="button"
+                            className="bubble-shot"
+                            onClick={() => openLightbox(shots, i)}
+                            aria-label="ดูรูปเต็ม"
+                          >
+                            <img src={url} alt="ภาพที่แนบ" />
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {message.content ? <p>{message.content}</p> : null}
+                  </div>
+                  <div className="turn-actions">
+                    <button
+                      type="button"
+                      className="turn-action"
+                      title="ส่งคำถามนี้ใหม่"
+                      aria-label="ส่งคำถามนี้ใหม่"
+                      disabled={streaming || !message.content}
+                      onClick={() => void resendFrom(message.id, message.content)}
+                    >
+                      <RetryIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="turn-action"
+                      title="แก้ไขแล้วส่งใหม่"
+                      aria-label="แก้ไขแล้วส่งใหม่"
+                      disabled={streaming}
+                      onClick={() => {
+                        setEditDraft(message.content);
+                        setEditingId(message.id);
+                      }}
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="turn-action"
+                      title="คัดลอกข้อความ"
+                      aria-label="คัดลอกข้อความ"
+                      onClick={() => void copyMessage(message.content)}
+                    >
+                      <CopyIcon />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div key={message.id} className="turn ai">
@@ -336,6 +489,17 @@ export default function AssistantPanel({
                   </div>
                 ) : null}
                 {message.meta?.stats ? <StatsLine stats={message.meta.stats} /> : null}
+                <div className="turn-actions">
+                  <button
+                    type="button"
+                    className="turn-action"
+                    title="คัดลอกคำตอบ"
+                    aria-label="คัดลอกคำตอบ"
+                    onClick={() => void copyMessage(message.content)}
+                  >
+                    <CopyIcon />
+                  </button>
+                </div>
               </div>
             </div>
           );

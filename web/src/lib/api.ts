@@ -171,6 +171,11 @@ export const api = {
   chatHistory: (thread: string) =>
     request<{ thread: string; messages: ChatMessage[] }>(`/chat/${thread}`),
   clearChat: (thread: string) => request<{ ok: true }>(`/chat/${thread}`, { method: "DELETE" }),
+  /** Drops `messageId` and every turn after it — used before an edit or a retry. */
+  truncateChatFrom: (thread: string, messageId: string) =>
+    request<{ ok: true; removed: number }>(`/chat/${thread}/from/${messageId}`, {
+      method: "DELETE",
+    }),
 };
 
 export type ChatStreamEvent =

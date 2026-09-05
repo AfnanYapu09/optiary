@@ -138,6 +138,77 @@
   flex-wrap: wrap;
 }
 
+/* Per-turn controls. They sit dim until the turn is hovered or one of them has
+   keyboard focus, so a long thread doesn't read as a wall of buttons — but they
+   stay in the layout rather than appearing on hover, which would make the
+   transcript jump as the pointer crosses it. */
+.turn-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.turn:hover .turn-actions,
+.turn-actions:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  /* No hover to reveal them on a touch screen, so they are always visible. */
+  .turn-actions {
+    opacity: 1;
+  }
+}
+
+.turn-action {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--t-30);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.turn-action:hover:not(:disabled) {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+.turn-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bubble.user.editing {
+  width: min(100%, 520px);
+  gap: 8px;
+}
+.bubble-edit {
+  width: 100%;
+  resize: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: 400 15px/1.7 var(--thai);
+  color: var(--ink);
+}
+.bubble-edit:focus {
+  outline: none;
+}
+.bubble-edit-note {
+  margin: 0;
+  font: 400 11.5px/1.5 var(--thai);
+  color: var(--t-30);
+}
+.bubble-edit-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
 .chip {
   padding: 6px 11px;
   border-radius: 8px;
