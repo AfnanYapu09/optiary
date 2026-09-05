@@ -201,9 +201,28 @@ chatRoutes.post("/chat", chatUpload.array("files") as any, async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  // A proxy that buffers the response holds every frame until the turn ends,
+  // which defeats streaming entirely.
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders?.();
 
   const send = (event: unknown) => res.write(`data: ${JSON.stringify(event)}\n\n`);
+
+  /**
+   * Keeps the connection demonstrably alive during the model's silences.
+   *
+   * A reasoning model emits nothing readable while it thinks — the thinking
+   * blocks carry no text_delta — and a tool round adds more quiet on top. Half a
+   * minute with nothing on the wire looks like an idle connection to whatever
+   * sits between the browser and this process, and it gets closed; to the user
+   * the turn simply cancels itself and has to be sent again.
+   *
+   * A comment frame costs nothing and is ignored by the client parser, which
+   * only reads lines beginning `data: `.
+   */
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) res.write(`: ping\n\n`);
+  }, 15_000);
 
   let answer = "";
   let stats: unknown = null;
@@ -245,6 +264,8 @@ chatRoutes.post("/chat", chatUpload.array("files") as any, async (req, res) => {
     // Keep the failure in the transcript. Without this the turn vanished on the
     // next reload and the user could not tell whether anything had run.
     answer = answer.trim() ? `${answer}\n\n⚠️ ${description}` : `⚠️ ${description}`;
+  } finally {
+    clearInterval(heartbeat);
   }
 
   // Whatever was produced before the stop is still worth keeping — anything the

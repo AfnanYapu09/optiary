@@ -136,12 +136,18 @@ export default function AssistantPanel({
   // Which user turn is open for editing, and the text being edited in it.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  /** The transcript could not be loaded — distinct from the thread being empty. */
+  const [historyFailed, setHistoryFailed] = useState(false);
 
   // The turn itself lives above the router, so leaving this page mid-answer no
   // longer cancels it — coming back re-attaches to the same live stream.
   const { start, stop, clear } = useChatRuns();
   const run = useChatRun(thread);
   const streaming = Boolean(run && !run.done);
+  // Read inside the completion effect without making the run object a dependency,
+  // which would re-run it on every streamed chunk.
+  const runRef = useRef(run);
+  runRef.current = run;
   const partial = run?.partial ?? "";
   const activity = run?.activity ?? null;
   const [lightbox, setLightbox] = useState<{ urls: string[]; index: number } | null>(null);
@@ -213,12 +219,47 @@ export default function AssistantPanel({
   );
   useEffect(() => () => previews.forEach((p) => URL.revokeObjectURL(p.url)), [previews]);
 
+  /**
+   * Loads a thread, retrying a couple of times before giving up.
+   *
+   * A failure must never clear what is on screen. This used to `setMessages([])`
+   * on any rejection, so one blip — a sleeping instance waking, a token being
+   * refreshed — emptied the panel and the conversation looked like it had reset
+   * itself to a new chat, even though the server still had every message.
+   */
+  const loadThread = useCallback(
+    async (target: string, isCurrent: () => boolean): Promise<boolean> => {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const res = await api.chatHistory(target);
+          if (isCurrent()) {
+            setMessages(res.messages);
+            setHistoryFailed(false);
+          }
+          return true;
+        } catch {
+          if (attempt < 2) await new Promise((r) => setTimeout(r, 400 * 2 ** attempt));
+        }
+      }
+      // Say so rather than sitting there empty. An unexplained blank panel is
+      // indistinguishable from a fresh conversation, which is exactly the wrong
+      // thing to imply about a thread whose messages are still on the server.
+      if (isCurrent()) setHistoryFailed(true);
+      return false;
+    },
+    [],
+  );
+
   useEffect(() => {
-    api
-      .chatHistory(thread)
-      .then((res) => setMessages(res.messages))
-      .catch(() => setMessages([]));
-  }, [thread]);
+    let alive = true;
+    // Switching threads is the one time the old messages must go: they belong to
+    // a different conversation, so showing them while this one loads would be wrong.
+    setMessages([]);
+    void loadThread(thread, () => alive);
+    return () => {
+      alive = false;
+    };
+  }, [loadThread, thread]);
 
   useEffect(() => {
     const el = scroller.current;
@@ -272,26 +313,53 @@ export default function AssistantPanel({
   // When a run finishes — whether or not this panel was mounted for it — pull
   // the canonical transcript so the user turn gets real attachment ids and the
   // assistant turn carries its saved stats, then drop the finished run.
+  //
+  // Clearing the run is what removes the optimistic bubble and the streamed text
+  // from the screen, so it must not happen until the turn is safely somewhere
+  // else. It used to run in a `finally`: when the reload failed, the just-finished
+  // exchange disappeared and the panel looked like a brand-new chat. Now a failed
+  // reload rebuilds the turn from the run itself before letting go of it.
   useEffect(() => {
     if (!run?.done) return;
     let alive = true;
-    api
-      .chatHistory(thread)
-      .then((res) => {
-        if (alive) setMessages(res.messages);
-      })
-      .catch(() => {
-        /* the transcript stays as-is; the next mount refetches */
-      })
-      .finally(() => {
-        if (!alive) return;
-        ownsEcho.current = false;
-        clear(thread);
-      });
+
+    void (async () => {
+      const reloaded = await loadThread(thread, () => alive);
+      if (!alive) return;
+
+      const finished = runRef.current;
+      if (!reloaded && finished) {
+        const at = new Date(finished.startedAt).toISOString();
+        const rebuilt: ChatMessage[] = [];
+        if (finished.echo?.content) {
+          rebuilt.push({
+            id: `local-user-${finished.startedAt}`,
+            role: "user",
+            content: finished.echo.content,
+            meta: {},
+            createdAt: at,
+          });
+        }
+        if (finished.partial.trim()) {
+          rebuilt.push({
+            id: `local-assistant-${finished.startedAt}`,
+            role: "assistant",
+            content: finished.partial,
+            meta: finished.stats ? { stats: finished.stats } : {},
+            createdAt: new Date().toISOString(),
+          });
+        }
+        if (rebuilt.length) setMessages((current) => [...current, ...rebuilt]);
+      }
+
+      ownsEcho.current = false;
+      clear(thread);
+    })();
+
     return () => {
       alive = false;
     };
-  }, [clear, run?.done, thread]);
+  }, [clear, loadThread, run?.done, thread]);
 
   useEffect(() => {
     if (initialQuestion && !sentInitial.current) {
@@ -368,7 +436,24 @@ export default function AssistantPanel({
       </header>
 
       <div className="assistant-log" ref={scroller}>
-        {messages.length === 0 && !streaming ? (
+        {messages.length === 0 && !streaming && historyFailed ? (
+          <div className="assistant-welcome">
+            <span className="diamond" aria-hidden="true" />
+            <h2>โหลดประวัติแชทไม่สำเร็จ</h2>
+            <p>ข้อความเก่ายังอยู่บนเซิร์ฟเวอร์ ไม่ได้หายไปไหน</p>
+            <button
+              className="chip"
+              onClick={() => {
+                setHistoryFailed(false);
+                void loadThread(thread, () => true);
+              }}
+            >
+              ลองอีกครั้ง
+            </button>
+          </div>
+        ) : null}
+
+        {messages.length === 0 && !streaming && !historyFailed ? (
           <div className="assistant-welcome">
             <span className="diamond" aria-hidden="true" />
             <h2>วันนี้อยากให้ช่วยอะไรครับ</h2>

@@ -54,6 +54,8 @@ export function ChatRunsProvider({ children }: { children: ReactNode }) {
   const [runs, setRuns] = useState<Record<string, RunState>>({});
   const listeners = useRef(new Set<(change: DataChange) => void>());
   const aborters = useRef(new Map<string, AbortController>());
+  /** Threads with a turn in flight, so the guard never reads stale state. */
+  const active = useRef(new Set<string>());
 
   const patch = useCallback((thread: string, next: Partial<RunState>) => {
     setRuns((current) => {
@@ -84,9 +86,14 @@ export function ChatRunsProvider({ children }: { children: ReactNode }) {
 
   const start = useCallback<Ctx["start"]>(
     async ({ thread, message, slot, files, onEvent }) => {
-      // One run per thread; a second send while one is live is ignored the way
-      // the panel's own `streaming` guard used to do it.
-      if (runs[thread] && !runs[thread].done) return;
+      // One run per thread. Tracked in a ref rather than read off `runs`: state
+      // read through the closure is a snapshot, so two sends in the same tick
+      // both saw "nothing running" and the second overwrote the first's aborter,
+      // leaving a turn nobody could stop. Keeping `runs` out of the dependencies
+      // also stops this callback — and every `send` built on it — being rebuilt
+      // on each streamed chunk.
+      if (active.current.has(thread)) return;
+      active.current.add(thread);
 
       const previews = (files ?? []).map((file) => ({
         url: URL.createObjectURL(file),
@@ -154,11 +161,15 @@ export function ChatRunsProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      active.current.delete(thread);
       aborters.current.delete(thread);
       previews.forEach((p) => URL.revokeObjectURL(p.url));
-      patch(thread, { done: true, activity: null, echo: null });
+      // `echo` is deliberately kept until the panel calls `clear`. It is the only
+      // remaining copy of what the user asked, and the panel needs it to rebuild
+      // the turn locally if reloading the transcript fails.
+      patch(thread, { done: true, activity: null });
     },
-    [emit, patch, runs],
+    [emit, patch],
   );
 
   const stop = useCallback((thread: string) => {
@@ -189,6 +200,7 @@ export const TOOL_LABELS: Record<string, string> = {
   save_shot: "กำลังเก็บภาพเข้าคลัง…",
   save_metrics: "กำลังบันทึกตัวเลขที่อ่านได้…",
   resolve_date: "กำลังตรวจสอบปีของวันที่…",
+  set_gamma: "กำลังประเมิน gamma ของวัน…",
   update_settings: "กำลังปรับตั้งค่า…",
   delete_data: "กำลังจัดการลบข้อมูล…",
 };
