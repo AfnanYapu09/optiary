@@ -3,8 +3,11 @@ import type {
   ChatMessage,
   ChatStats,
   CompareResult,
+  DayImageKind,
+  DayMarks,
   DayRecord,
   EntryRecord,
+  GammaRegime,
   ImageKind,
   ImageRecord,
   LibraryItem,
@@ -73,6 +76,33 @@ function json(method: string, body: unknown): RequestInit {
 }
 
 /**
+ * POSTs one image as multipart. Separate from `request` because the body is
+ * FormData — setting a content-type here would omit the boundary the server
+ * needs to parse it — and because the path is absolute, bypassing the /api
+ * prefix `request` adds.
+ */
+async function postFile<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(path, { method: "POST", body: form, headers, credentials: "include" });
+  if (!res.ok) {
+    let message = `อัปโหลดไม่สำเร็จ (${res.status})`;
+    try {
+      const body = await res.json();
+      if (typeof body?.error === "string") message = body.error;
+    } catch {
+      /* keep generic message */
+    }
+    throw new ApiError(res.status, message);
+  }
+  return (await res.json()) as T;
+}
+
+/**
  * Collapses identical GETs that are in flight at the same moment into one
  * request. Two components can legitimately want the same data on the same
  * render — the shell and the home page both need the dataset totals — and
@@ -126,35 +156,21 @@ export const api = {
   saveEntry: (date: string, slot: SlotId, patch: { note?: string; tags?: string[]; metrics?: Metrics }) =>
     request<EntryRecord>(`/days/${date}/${slot}`, json("PUT", patch)),
 
-  uploadImage: async (date: string, slot: SlotId, kind: ImageKind, file: File) => {
-    const form = new FormData();
-    form.append("file", file);
-    const token = getStoredToken();
-    const headers: Record<string, string> = {};
-    if (token) headers["authorization"] = `Bearer ${token}`;
-    const res = await fetch(`/api/images/${date}/${slot}/${kind}`, {
-      method: "POST",
-      body: form,
-      headers,
-      credentials: "include",
-    });
-    if (!res.ok) {
-      let message = `อัปโหลดไม่สำเร็จ (${res.status})`;
-      try {
-        const body = await res.json();
-        if (typeof body?.error === "string") message = body.error;
-      } catch {
-        /* keep generic message */
-      }
-      throw new ApiError(res.status, message);
-    }
-    return (await res.json()) as {
+  uploadImage: (date: string, slot: SlotId, kind: ImageKind, file: File) =>
+    postFile<{
       image: ImageRecord;
       extraction: { ok: true } | { ok: false; message: string } | null;
       day: DayRecord;
-    };
-  },
+    }>(`/api/images/${date}/${slot}/${kind}`, file),
   deleteImage: (id: string) => request<{ ok: true }>(`/images/${id}`, { method: "DELETE" }),
+
+  /** The day's own shots — pre-news intraday and the reveal, one of each. */
+  uploadDayShot: (date: string, kind: DayImageKind, file: File) =>
+    postFile<{ image: ImageRecord; day: DayRecord }>(`/api/days/${date}/shot/${kind}`, file),
+  deleteDayShot: (date: string, kind: DayImageKind) =>
+    request<{ ok: true; day: DayRecord }>(`/days/${date}/shot/${kind}`, { method: "DELETE" }),
+  saveDayMarks: (date: string, patch: { gamma?: GammaRegime | null; revealNote?: string }) =>
+    request<{ marks: DayMarks }>(`/days/${date}/marks`, json("PUT", patch)),
   extract: (date: string, slot: SlotId) =>
     request<{ entry: EntryRecord; confidence: string }>(`/extract/${date}/${slot}`, { method: "POST" }),
 

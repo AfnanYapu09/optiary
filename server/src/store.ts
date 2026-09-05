@@ -1,10 +1,14 @@
 import path from "node:path";
 import { BUCKET, supabase, nowIso, uid } from "./db.js";
 import {
+  DAY_SLOT,
   IMAGE_KINDS,
   SLOTS,
   SLOT_IDS,
+  type DayImageKind,
+  type DayMarks,
   type DayNews,
+  type GammaRegime,
   type ImageKind,
   type Metrics,
   type NewsEvent,
@@ -46,11 +50,16 @@ export type EntryRecord = {
 export type DayRecord = {
   date: string;
   slots: EntryRecord[];
+  /** Slot screenshots only — the day-level pair is counted separately. */
   imageCount: number;
   /** 15 = five slots × three screenshots. */
   imageTarget: number;
   /** Day-level economic news, shown under the slots regardless of which is open. */
   news: DayNews;
+  /** The pre-news intraday shot and the reveal, at most one of each. */
+  dayShots: Partial<Record<DayImageKind, ImageRecord>>;
+  /** Gamma reading and the reveal's note. */
+  marks: DayMarks;
 };
 
 function parseJson<T>(raw: string, fallback: T): T {
@@ -92,7 +101,7 @@ function toImage(row: ImageRow): ImageRecord {
 const MAX_ROWS = 10_000;
 
 export async function getDay(userId: string, date: string): Promise<DayRecord> {
-  const [{ data: entryRows }, { data: imageRows }, news] = await Promise.all([
+  const [{ data: entryRows }, { data: imageRows }, news, marks] = await Promise.all([
     supabase
       .from("entries")
       .select("slot, note, tags, metrics, updated_at")
@@ -104,6 +113,7 @@ export async function getDay(userId: string, date: string): Promise<DayRecord> {
       .eq("user_id", userId)
       .eq("date", date),
     getDayNews(userId, date),
+    getDayMarks(userId, date),
   ]);
 
   const entries = (entryRows ?? []) as Array<{
@@ -113,7 +123,14 @@ export async function getDay(userId: string, date: string): Promise<DayRecord> {
     metrics: string;
     updated_at: string;
   }>;
-  const images = (imageRows ?? []) as ImageRow[];
+  const allImages = (imageRows ?? []) as ImageRow[];
+  // The day-level pair is addressed by kind, not by slot, and must stay out of
+  // the 15-shot count or a day could never read as complete.
+  const images = allImages.filter((row) => row.slot !== DAY_SLOT);
+  const dayShots: Partial<Record<DayImageKind, ImageRecord>> = {};
+  for (const row of allImages.filter((r) => r.slot === DAY_SLOT)) {
+    dayShots[row.kind as DayImageKind] = toImage(row);
+  }
 
   const slots: EntryRecord[] = SLOTS.map((def) => {
     const row = entries.find((r) => r.slot === def.id);
@@ -138,7 +155,147 @@ export async function getDay(userId: string, date: string): Promise<DayRecord> {
     imageCount: images.length,
     imageTarget: SLOTS.length * IMAGE_KINDS.length,
     news,
+    dayShots,
+    marks,
   };
+}
+
+export async function getDayMarks(userId: string, date: string): Promise<DayMarks> {
+  const { data } = await supabase
+    .from("day_news")
+    .select("gamma, gamma_source, reveal_note")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
+  const row = data as
+    | { gamma: string | null; gamma_source: string | null; reveal_note: string | null }
+    | null;
+  return {
+    gamma: (row?.gamma as GammaRegime | null) ?? null,
+    gammaSource: (row?.gamma_source as "ai" | "user" | null) ?? null,
+    revealNote: row?.reveal_note ?? "",
+  };
+}
+
+/**
+ * Upserts the day's gamma reading and reveal note.
+ *
+ * `source` records who decided. An assistant suggestion never overwrites a call
+ * the user has already made — the point of the field is that a proposal and a
+ * decision are different things, and the second should survive the first.
+ */
+export async function saveDayMarks(
+  userId: string,
+  date: string,
+  patch: { gamma?: GammaRegime | null; revealNote?: string },
+  source: "ai" | "user",
+): Promise<DayMarks> {
+  const current = await getDayMarks(userId, date);
+
+  let gamma = current.gamma;
+  let gammaSource = current.gammaSource;
+  if (patch.gamma !== undefined) {
+    const userAlreadyDecided = current.gammaSource === "user" && source === "ai";
+    if (!userAlreadyDecided) {
+      gamma = patch.gamma;
+      gammaSource = patch.gamma === null ? null : source;
+    }
+  }
+
+  const revealNote = patch.revealNote ?? current.revealNote;
+
+  // day_news holds one row per (user, date); the news fields keep their values
+  // because the upsert carries whatever is already stored.
+  const news = await getDayNews(userId, date);
+  await supabase.from("day_news").upsert(
+    {
+      user_id: userId,
+      date,
+      events: JSON.stringify(news.events),
+      week_summary: news.weekSummary,
+      gamma,
+      gamma_source: gammaSource,
+      reveal_note: revealNote,
+      updated_at: nowIso(),
+    },
+    { onConflict: "user_id,date" },
+  );
+
+  return { gamma, gammaSource, revealNote };
+}
+
+/**
+ * Stores the day's pre-news or reveal screenshot, replacing any earlier one.
+ *
+ * Deliberately not a call to `storeImage`: that one also ensures an `entries`
+ * row for the slot it was given, and a row for the reserved `day` slot would be
+ * counted as a written-up session by the footprint and the series.
+ */
+export async function storeDayImage(
+  userId: string,
+  date: string,
+  kind: DayImageKind,
+  file: { buffer: Buffer; mimetype: string; originalname: string },
+): Promise<ImageRecord> {
+  const { data: existingRow } = await supabase
+    .from("images")
+    .select("id, filename")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .eq("slot", DAY_SLOT)
+    .eq("kind", kind)
+    .maybeSingle();
+  const existing = existingRow as { id: string; filename: string } | null;
+  if (existing) await removeStoredFile(existing.filename);
+
+  const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, "") || ".png";
+  const filename = `${userId}_${date}_${DAY_SLOT}_${kind}_${Date.now()}${ext}`;
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(filename, file.buffer, { contentType: file.mimetype, upsert: true });
+  if (error) throw new Error(`Could not store screenshot: ${error.message}`);
+
+  const id = existing?.id ?? uid();
+  const createdAt = nowIso();
+  const row = {
+    filename,
+    mime: file.mimetype,
+    bytes: file.buffer.byteLength,
+    created_at: createdAt,
+  };
+  if (existing) {
+    await supabase.from("images").update(row).eq("id", id);
+  } else {
+    await supabase
+      .from("images")
+      .insert({ id, user_id: userId, date, slot: DAY_SLOT, kind, ...row });
+  }
+
+  return toImage({
+    id,
+    date,
+    slot: DAY_SLOT,
+    kind,
+    mime: file.mimetype,
+    bytes: file.buffer.byteLength,
+    created_at: createdAt,
+  });
+}
+
+export async function deleteDayImage(
+  userId: string,
+  date: string,
+  kind: DayImageKind,
+): Promise<boolean> {
+  const { data: row } = await supabase
+    .from("images")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .eq("slot", DAY_SLOT)
+    .eq("kind", kind)
+    .maybeSingle();
+  return row ? deleteImage(userId, (row as { id: string }).id) : false;
 }
 
 export async function getDayNews(userId: string, date: string): Promise<DayNews> {
@@ -761,10 +918,13 @@ export type Streak = {
 };
 
 export async function getStreak(userId: string): Promise<Streak> {
+  // Slot shots only: a complete day is 15 of those, and counting the day-level
+  // pair here would let 13 slot shots plus a reveal read as a finished day.
   const { data } = await supabase
     .from("images")
     .select("date")
     .eq("user_id", userId)
+    .neq("slot", DAY_SLOT)
     .limit(MAX_ROWS);
 
   const rows = (data ?? []) as Array<{ date: string }>;

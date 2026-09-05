@@ -13,6 +13,7 @@ import {
   IMAGE_KINDS,
   SLOTS,
   isDateString,
+  isGammaRegime,
   isImageKind,
   isSlotId,
   type ImageKind,
@@ -27,9 +28,11 @@ import {
   deleteDay,
   deleteImageAt,
   getDay,
+  getDayMarks,
   getSeries,
   getStreak,
   listDataDates,
+  saveDayMarks,
   saveDayNews,
   saveEntry,
   slotFootprint,
@@ -386,6 +389,25 @@ const ANTHROPIC_TOOLS: Anthropic.Tool[] = [
     input_schema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
+    name: "set_gamma",
+    description:
+      "เสนอว่าวันนั้นเป็น short หรือ long gamma พร้อมเหตุผลสั้น ๆ ดูจาก OI Chg, P/C ratio และพฤติกรรมราคาเทียบ strike ถ้าผู้ใช้เคยกำหนดเองไว้แล้ว ค่าของผู้ใช้จะไม่ถูกเขียนทับ — ให้บอกผู้ใช้แทนว่าคุณเห็นต่าง",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "วันที่รูปแบบ YYYY-MM-DD" },
+        gamma: {
+          type: "string",
+          enum: ["short", "long"],
+          description: "short = ราคาวิ่งแรงทะลุ strike, long = ราคาถูกตรึงแถว strike",
+        },
+        why: { type: "string", description: "เหตุผลสั้น ๆ ภาษาไทย อ้างตัวเลขที่เห็น" },
+      },
+      required: ["date", "gamma", "why"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "edit_note",
     description: "แก้โน้ตของวันและช่วงเวลาที่ระบุ ตั้ง replace=true เพื่อเขียนทับของเดิมทั้งหมด หรือ replace=false/ไม่ใส่ เพื่อต่อท้าย",
     input_schema: {
@@ -645,6 +667,24 @@ const GEMINI_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: { type: Type.OBJECT, properties: {}, required: [] },
   },
   {
+    name: "set_gamma",
+    description:
+      "เสนอว่าวันนั้นเป็น short หรือ long gamma พร้อมเหตุผลสั้น ๆ ถ้าผู้ใช้กำหนดเองไว้แล้วจะไม่ถูกเขียนทับ",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        date: { type: Type.STRING, description: "วันที่ YYYY-MM-DD" },
+        gamma: {
+          type: Type.STRING,
+          enum: ["short", "long"],
+          description: "short = ราคาวิ่งแรงทะลุ strike, long = ราคาถูกตรึงแถว strike",
+        },
+        why: { type: Type.STRING, description: "เหตุผลสั้น ๆ ภาษาไทย" },
+      },
+      required: ["date", "gamma", "why"],
+    },
+  },
+  {
     name: "edit_note",
     description: "แก้โน้ต ตั้ง replace=true เพื่อเขียนทับ หรือไม่ใส่เพื่อต่อท้าย",
     parameters: {
@@ -778,6 +818,12 @@ async function runTool(
       return {
         result: {
           date,
+          gamma: day.marks.gamma,
+          // The model needs to know whose call this is: it may revise its own
+          // reading, but the user's stands.
+          gammaSetBy: day.marks.gammaSource,
+          revealNote: day.marks.revealNote || null,
+          dayShots: Object.keys(day.dayShots),
           imageCount: day.imageCount,
           slots: day.slots.map((s) => ({
             slot: s.slot,
@@ -990,6 +1036,31 @@ async function runTool(
         return { result: { error: "ไม่มีข่าวแดงหรือวันหยุดให้บันทึก" } };
       }
       return { result: { saved, week }, sideEffect: effects };
+    }
+    case "set_gamma": {
+      const date = String(input.date ?? "");
+      const gamma = String(input.gamma ?? "");
+      if (!isDateString(date)) return { result: { error: "วันที่ไม่ถูกต้อง ต้องเป็น YYYY-MM-DD" } };
+      if (!isGammaRegime(gamma)) return { result: { error: "gamma ต้องเป็น short หรือ long" } };
+
+      const before = await getDayMarks(userId, date);
+      const marks = await saveDayMarks(userId, date, { gamma }, "ai");
+      // saveDayMarks refuses to overwrite a call the user made, so report what
+      // actually happened rather than what was asked for.
+      if (before.gammaSource === "user" && before.gamma !== gamma) {
+        return {
+          result: {
+            saved: false,
+            date,
+            keptUserValue: before.gamma,
+            note: "ผู้ใช้กำหนดค่าไว้เองแล้ว จึงไม่เขียนทับ — บอกผู้ใช้ว่าคุณเห็นต่างและเพราะอะไร",
+          },
+        };
+      }
+      return {
+        result: { saved: true, date, gamma: marks.gamma, why: String(input.why ?? "") },
+        sideEffect: { type: "data-changed", date },
+      };
     }
     case "list_days": {
       const dates = await listDataDates(userId);

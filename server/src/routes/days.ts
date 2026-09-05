@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireUser } from "../auth.js";
-import { isDateString, isSlotId } from "../domain.js";
-import { getCalendar, getDay, getStreak, saveEntry } from "../store.js";
+import { isDateString, isGammaRegime, isSlotId, type GammaRegime } from "../domain.js";
+import { getCalendar, getDay, getStreak, saveDayMarks, saveEntry } from "../store.js";
 
 export const dayRoutes = Router();
 
@@ -27,6 +27,39 @@ dayRoutes.get("/days/:date", async (req, res) => {
     return;
   }
   res.json(await getDay(req.user!.id, date));
+});
+
+/**
+ * The day's gamma call and the note that goes with the reveal chart.
+ *
+ * Declared before `/days/:date/:slot`, which would otherwise match this path
+ * first and reject "marks" as an unknown slot.
+ *
+ * Saved as `user`, so a reading a person set here outranks the assistant's and
+ * will not be quietly replaced the next time the model looks at the day.
+ */
+dayRoutes.put("/days/:date/marks", async (req, res) => {
+  const date = String(req.params.date ?? "");
+  if (!isDateString(date)) {
+    res.status(400).json({ error: "date must be YYYY-MM-DD" });
+    return;
+  }
+
+  const patch: { gamma?: GammaRegime | null; revealNote?: string } = {};
+  if ("gamma" in (req.body ?? {})) {
+    const raw = req.body.gamma;
+    if (raw === null || raw === "") patch.gamma = null;
+    else if (typeof raw === "string" && isGammaRegime(raw)) patch.gamma = raw;
+    else {
+      res.status(400).json({ error: "gamma must be 'short', 'long' or null" });
+      return;
+    }
+  }
+  if (typeof req.body?.revealNote === "string") {
+    patch.revealNote = req.body.revealNote.slice(0, 2000);
+  }
+
+  res.json({ marks: await saveDayMarks(req.user!.id, date, patch, "user") });
 });
 
 dayRoutes.put("/days/:date/:slot", async (req, res) => {

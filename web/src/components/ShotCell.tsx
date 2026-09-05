@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { KIND_LABELS, type ImageKind, type ImageRecord } from "../lib/types.ts";
+import {
+  KIND_LABELS,
+  type DayImageKind,
+  type ImageKind,
+  type ImageRecord,
+} from "../lib/types.ts";
 
 type Props = {
-  kind: ImageKind;
+  /** Slot shots and the day's own shots render identically. */
+  kind: ImageKind | DayImageKind;
   image?: ImageRecord;
   height: number;
   caption?: string;

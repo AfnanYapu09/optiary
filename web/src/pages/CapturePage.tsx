@@ -9,13 +9,18 @@ import Lightbox, { type LightboxItem } from "../components/Lightbox.tsx";
 import { fullThaiDate, num, signed, todayIso } from "../lib/format.ts";
 import { syncEntryToCloud } from "../lib/firebase.ts";
 import {
+  DAY_IMAGE_KINDS,
+  GAMMA_LABELS,
+  GAMMA_REGIMES,
   IMAGE_KINDS,
   KIND_LABELS,
   SLOTS,
   slotDef,
+  type DayImageKind,
   type DayNews,
   type DayRecord,
   type EntryRecord,
+  type GammaRegime,
   type ImageKind,
   type SlotId,
 } from "../lib/types.ts";
@@ -142,11 +147,13 @@ export default function CapturePage() {
   const [day, setDay] = useState<DayRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<ImageKind | null>(null);
+  const [dayUploading, setDayUploading] = useState<DayImageKind | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [note, setNote] = useState("");
   const [tagDraft, setTagDraft] = useState("");
   const [addingTag, setAddingTag] = useState(false);
   const [viewing, setViewing] = useState<number | null>(null);
+  const [dayViewing, setDayViewing] = useState<number | null>(null);
   const saveTimer = useRef<number | null>(null);
 
   const slotParam = params.get("slot");
@@ -233,6 +240,71 @@ export default function CapturePage() {
     },
     [date, toast],
   );
+
+  const uploadDayShot = useCallback(
+    async (kind: DayImageKind, file: File) => {
+      setDayUploading(kind);
+      try {
+        const result = await api.uploadDayShot(date, kind, file);
+        setDay(result.day);
+        toast(`บันทึก${KIND_LABELS[kind]}แล้ว`, "ok");
+      } catch (error) {
+        toast(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ", "err");
+      } finally {
+        setDayUploading(null);
+      }
+    },
+    [date, toast],
+  );
+
+  const removeDayShot = useCallback(
+    async (kind: DayImageKind) => {
+      try {
+        setDay((await api.deleteDayShot(date, kind)).day);
+      } catch (error) {
+        toast(error instanceof Error ? error.message : "ลบภาพไม่สำเร็จ", "err");
+      }
+    },
+    [date, toast],
+  );
+
+  /** Clicking the active regime again clears it, so a mistake is one click to undo. */
+  const setGamma = useCallback(
+    async (value: GammaRegime) => {
+      const next = day?.marks?.gamma === value ? null : value;
+      try {
+        const { marks } = await api.saveDayMarks(date, { gamma: next });
+        setDay((current) => (current ? { ...current, marks } : current));
+      } catch (error) {
+        toast(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ", "err");
+      }
+    },
+    [date, day?.marks?.gamma, toast],
+  );
+
+  // Typed into, so it saves on a pause rather than on every keystroke — the same
+  // rhythm the slot note already uses.
+  const revealTimer = useRef<number | null>(null);
+  const saveRevealNote = useCallback(
+    (text: string) => {
+      setDay((current) =>
+        current ? { ...current, marks: { ...current.marks, revealNote: text } } : current,
+      );
+      if (revealTimer.current) window.clearTimeout(revealTimer.current);
+      revealTimer.current = window.setTimeout(() => {
+        api
+          .saveDayMarks(date, { revealNote: text })
+          .catch((error) =>
+            toast(error instanceof Error ? error.message : "บันทึกคำอธิบายไม่สำเร็จ", "err"),
+          );
+      }, 700);
+    },
+    [date, toast],
+  );
+
+  useEffect(() => () => {
+    if (revealTimer.current) window.clearTimeout(revealTimer.current);
+  }, []);
 
   const runExtract = useCallback(async () => {
     setExtracting(true);
@@ -322,6 +394,21 @@ export default function CapturePage() {
       },
     ];
   });
+
+  // Defaults rather than direct reads: a browser still holding the previous
+  // build talks to the new API and vice versa across a deploy, and a missing
+  // field should cost the day panel, not blank the whole page.
+  const marks = day?.marks ?? { gamma: null, gammaSource: null, revealNote: "" };
+  const dayShots = day?.dayShots ?? {};
+
+  /** The day's own two shots get their own viewer so its arrows stay within them. */
+  const dayShotViews: Array<{ kind: DayImageKind; item: LightboxItem }> = DAY_IMAGE_KINDS.flatMap(
+    (kind) => {
+      const image = dayShots[kind];
+      if (!image) return [];
+      return [{ kind, item: { url: image.url, title: KIND_LABELS[kind], caption: fullThaiDate(date) } }];
+    },
+  );
 
   return (
     <div className="capture">
@@ -486,6 +573,67 @@ export default function CapturePage() {
             </div>
           </div>
 
+          {day ? (
+            <div className="day-panel">
+              <div className="day-panel-head">
+                <h3>ภาพรวมทั้งวัน</h3>
+                <div className="gamma-pick" role="group" aria-label="Gamma ของวันนี้">
+                  {GAMMA_REGIMES.map((regime) => (
+                    <button
+                      key={regime}
+                      type="button"
+                      className={`gamma-btn ${regime}${marks.gamma === regime ? " on" : ""}`}
+                      aria-pressed={marks.gamma === regime}
+                      onClick={() => void setGamma(regime)}
+                      title={
+                        marks.gamma === regime
+                          ? "กดอีกครั้งเพื่อล้างค่า"
+                          : `ตั้งวันนี้เป็น ${GAMMA_LABELS[regime]}`
+                      }
+                    >
+                      {GAMMA_LABELS[regime]}
+                    </button>
+                  ))}
+                  {/* An AI reading is a suggestion until a person confirms it, and
+                      saying so is what stops it being mistaken for the user's own call. */}
+                  {marks.gamma && marks.gammaSource === "ai" ? (
+                    <span className="gamma-hint">AI เสนอ — กดเพื่อยืนยันหรือเปลี่ยน</span>
+                  ) : null}
+                  {!marks.gamma ? <span className="gamma-hint">ยังไม่ระบุ</span> : null}
+                </div>
+              </div>
+
+              <div className="day-shots">
+                {DAY_IMAGE_KINDS.map((kind) => (
+                  <ShotCell
+                    key={kind}
+                    kind={kind}
+                    image={dayShots[kind]}
+                    height={190}
+                    busy={dayUploading === kind}
+                    onUpload={(file) => void uploadDayShot(kind, file)}
+                    onRemove={dayShots[kind] ? () => void removeDayShot(kind) : undefined}
+                    onView={
+                      dayShots[kind]
+                        ? () => setDayViewing(dayShotViews.findIndex((s) => s.kind === kind))
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+
+              <label className="day-reveal">
+                <span>เฉลยกราฟ — สรุปว่าวันนี้จบยังไง</span>
+                <textarea
+                  rows={3}
+                  value={marks.revealNote}
+                  placeholder="เช่น ราคาถูกตรึงแถว 4,400 จนหมดวัน ตรงกับ long gamma ที่อ่านไว้ตอนเช้า"
+                  onChange={(event) => saveRevealNote(event.target.value)}
+                />
+              </label>
+            </div>
+          ) : null}
+
           {day ? <NewsPanel news={day.news} /> : null}
         </section>
 
@@ -507,6 +655,15 @@ export default function CapturePage() {
           index={viewing}
           onIndex={setViewing}
           onClose={() => setViewing(null)}
+        />
+      ) : null}
+
+      {dayViewing !== null && dayShotViews[dayViewing] ? (
+        <Lightbox
+          items={dayShotViews.map((s) => s.item)}
+          index={dayViewing}
+          onIndex={setDayViewing}
+          onClose={() => setDayViewing(null)}
         />
       ) : null}
     </div>

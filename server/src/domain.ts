@@ -41,6 +41,57 @@ export function isImageKind(v: string): v is ImageKind {
   return (IMAGE_KINDS as readonly string[]).includes(v);
 }
 
+/**
+ * Two screenshots that belong to the day as a whole rather than to a capture
+ * window: the intraday chart as it stood just before the day's news, and the
+ * reveal — how it actually resolved.
+ *
+ * They live in the same table as the slot shots under a reserved slot id, so
+ * uploading, serving and deleting an image stays one code path. The price is
+ * that anything counting a day's progress toward its 15 shots has to skip them,
+ * or a day would look complete without them and incomplete with them.
+ */
+export const DAY_SLOT = "day";
+
+export const DAY_IMAGE_KINDS = ["prenews", "reveal"] as const;
+export type DayImageKind = (typeof DAY_IMAGE_KINDS)[number];
+
+export const DAY_IMAGE_KIND_LABELS: Record<DayImageKind, string> = {
+  prenews: "Intraday ก่อนข่าว",
+  reveal: "เฉลยกราฟ",
+};
+
+export function isDayImageKind(v: string): v is DayImageKind {
+  return (DAY_IMAGE_KINDS as readonly string[]).includes(v);
+}
+
+/** Whether the session behaved as short or long gamma. */
+export const GAMMA_REGIMES = ["short", "long"] as const;
+export type GammaRegime = (typeof GAMMA_REGIMES)[number];
+
+export function isGammaRegime(v: string): v is GammaRegime {
+  return (GAMMA_REGIMES as readonly string[]).includes(v);
+}
+
+export const GAMMA_LABELS: Record<GammaRegime, string> = {
+  short: "Short gamma",
+  long: "Long gamma",
+};
+
+/** Day-level judgements that sit alongside the news for a date. */
+export type DayMarks = {
+  gamma: GammaRegime | null;
+  /**
+   * `ai` while the reading is only the assistant's suggestion, `user` once a
+   * person has confirmed or overridden it. The UI leans on this to show a
+   * proposal differently from a decision, and the assistant will not overwrite
+   * a call the user has already made.
+   */
+  gammaSource: "ai" | "user" | null;
+  /** What the reveal chart shows — the day's lesson, in a line or two. */
+  revealNote: string;
+};
+
 /** `YYYY-MM-DD`, rejecting anything that could escape a path or a query. */
 export function isDateString(v: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));

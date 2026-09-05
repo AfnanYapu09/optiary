@@ -2,8 +2,17 @@ import { Router } from "express";
 import multer from "multer";
 import { config } from "../config.js";
 import { requireUser } from "../auth.js";
-import { isDateString, isImageKind, isSlotId } from "../domain.js";
-import { deleteImage, getDay, getImageFile, getLibrary, saveEntry, storeImage } from "../store.js";
+import { isDateString, isDayImageKind, isImageKind, isSlotId } from "../domain.js";
+import {
+  deleteDayImage,
+  deleteImage,
+  getDay,
+  getImageFile,
+  getLibrary,
+  saveEntry,
+  storeDayImage,
+  storeImage,
+} from "../store.js";
 import { extractSlotMetrics } from "../ai/extract.js";
 import { describeAiError } from "../ai/client.js";
 
@@ -23,7 +32,51 @@ const upload = multer({
   },
 });
 
-imageRoutes.use(["/images", "/images/*", "/library", "/extract/*"], requireUser);
+// `/days/*` is guarded by dayRoutes too; repeated here so this file's routes do
+// not depend on another router being mounted first for their authorization.
+imageRoutes.use(
+  ["/images", "/images/*", "/library", "/extract/*", "/days/*"],
+  requireUser,
+);
+
+/**
+ * The day's own screenshots — the intraday chart before the news, and the
+ * reveal. One of each per day, so the kind is the address and there is no id to
+ * pass: uploading again replaces what was there.
+ */
+imageRoutes.post("/days/:date/shot/:kind", upload.single("file") as any, async (req, res) => {
+  const date = String(req.params.date ?? "");
+  const kind = String(req.params.kind ?? "");
+  if (!isDateString(date) || !isDayImageKind(kind)) {
+    res.status(400).json({ error: "bad date or kind" });
+    return;
+  }
+  if (!req.file) {
+    res.status(400).json({ error: "ไม่พบไฟล์ภาพ" });
+    return;
+  }
+
+  const image = await storeDayImage(req.user!.id, date, kind, {
+    buffer: req.file.buffer,
+    mimetype: req.file.mimetype,
+    originalname: req.file.originalname,
+  });
+  res.json({ image, day: await getDay(req.user!.id, date) });
+});
+
+imageRoutes.delete("/days/:date/shot/:kind", async (req, res) => {
+  const date = String(req.params.date ?? "");
+  const kind = String(req.params.kind ?? "");
+  if (!isDateString(date) || !isDayImageKind(kind)) {
+    res.status(400).json({ error: "bad date or kind" });
+    return;
+  }
+  if (!(await deleteDayImage(req.user!.id, date, kind))) {
+    res.status(404).json({ error: "not_found" });
+    return;
+  }
+  res.json({ ok: true, day: await getDay(req.user!.id, date) });
+});
 
 imageRoutes.get("/library", async (req, res) => {
   const kindParam = typeof req.query.kind === "string" ? req.query.kind : "";

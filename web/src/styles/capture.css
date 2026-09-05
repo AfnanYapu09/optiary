@@ -204,6 +204,100 @@
 }
 
 /* Day-level economic-news table, shown under the slot regardless of which is open. */
+/* Day-level block: the gamma call, the two whole-day shots, and the reveal note.
+   It sits above the news table because both describe the day rather than a slot. */
+.day-panel {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.day-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.day-panel-head h3 {
+  margin: 0;
+  font: 600 13px/1.4 var(--thai);
+  color: var(--t-60);
+}
+
+.gamma-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.gamma-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-3);
+  background: transparent;
+  font: 500 11.5px/1.4 var(--thai);
+  color: var(--t-60);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.gamma-btn:hover {
+  color: var(--ink);
+}
+/* Short and long are opposite states, so they take the two accents the app
+   already uses for opposites — amber for the day that runs, blue for the day
+   that gets pinned. Both tokens are redefined per theme, so this follows. */
+.gamma-btn.short.on {
+  border-color: var(--put);
+  color: var(--put);
+  background: var(--put-fill);
+}
+.gamma-btn.long.on {
+  border-color: var(--call);
+  color: var(--call);
+  background: var(--call-fill);
+}
+.gamma-hint {
+  font: 400 11px/1.4 var(--thai);
+  color: var(--t-30);
+}
+
+.day-shots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 720px) {
+  .day-shots {
+    grid-template-columns: 1fr;
+  }
+}
+
+.day-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.day-reveal > span {
+  font: 500 11.5px/1.4 var(--thai);
+  color: var(--t-60);
+}
+.day-reveal textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--fill-2);
+  font: 400 13.5px/1.65 var(--thai);
+  color: var(--ink);
+}
+.day-reveal textarea:focus {
+  outline: none;
+  border-color: var(--line-3);
+}
+
 .news-panel {
   margin-top: 14px;
   display: flex;

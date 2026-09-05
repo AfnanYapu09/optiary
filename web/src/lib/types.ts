@@ -4,10 +4,32 @@ export type SlotId = (typeof SLOT_IDS)[number];
 export const IMAGE_KINDS = ["intraday", "oi", "oichg"] as const;
 export type ImageKind = (typeof IMAGE_KINDS)[number];
 
-export const KIND_LABELS: Record<ImageKind, string> = {
+/** Shots that belong to the day rather than to one capture window. */
+export const DAY_IMAGE_KINDS = ["prenews", "reveal"] as const;
+export type DayImageKind = (typeof DAY_IMAGE_KINDS)[number];
+
+/** Both families share ShotCell, so the labels live in one map. */
+export const KIND_LABELS: Record<ImageKind | DayImageKind, string> = {
   intraday: "Intraday",
   oi: "OI",
   oichg: "OI Chg",
+  prenews: "Intraday ก่อนข่าว",
+  reveal: "เฉลยกราฟ",
+};
+
+export const GAMMA_REGIMES = ["short", "long"] as const;
+export type GammaRegime = (typeof GAMMA_REGIMES)[number];
+
+export const GAMMA_LABELS: Record<GammaRegime, string> = {
+  short: "Short gamma",
+  long: "Long gamma",
+};
+
+export type DayMarks = {
+  gamma: GammaRegime | null;
+  /** `ai` while it is only a suggestion, `user` once a person has decided. */
+  gammaSource: "ai" | "user" | null;
+  revealNote: string;
 };
 
 export type SlotDef = {
@@ -91,9 +113,12 @@ export type DayNews = {
 export type DayRecord = {
   date: string;
   slots: EntryRecord[];
+  /** Slot shots only — the day-level pair is not counted toward the target. */
   imageCount: number;
   imageTarget: number;
   news: DayNews;
+  dayShots: Partial<Record<DayImageKind, ImageRecord>>;
+  marks: DayMarks;
 };
 
 export type CalendarDay = {
