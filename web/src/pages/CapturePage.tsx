@@ -401,6 +401,20 @@ export default function CapturePage() {
   const marks = day?.marks ?? { gamma: null, gammaSource: null, revealNote: "" };
   const dayShots = day?.dayShots ?? {};
 
+  /**
+   * A shot taken "before the news" has nothing to be before on a day with no
+   * release, so that cell is left out — holidays don't count, since there is no
+   * figure to react to.
+   *
+   * It comes back if an image is already stored, which keeps a shot captured
+   * before the news was later deleted from becoming unreachable: hidden, still
+   * in the bucket, with no way to view or remove it.
+   */
+  const hasRelease = (day?.news?.events ?? []).some((event) => !event.holiday);
+  const visibleDayKinds = DAY_IMAGE_KINDS.filter(
+    (kind) => kind !== "prenews" || hasRelease || Boolean(dayShots.prenews),
+  );
+
   /** The day's own two shots get their own viewer so its arrows stay within them. */
   const dayShotViews: Array<{ kind: DayImageKind; item: LightboxItem }> = DAY_IMAGE_KINDS.flatMap(
     (kind) => {
@@ -604,7 +618,7 @@ export default function CapturePage() {
               </div>
 
               <div className="day-shots">
-                {DAY_IMAGE_KINDS.map((kind) => (
+                {visibleDayKinds.map((kind) => (
                   <ShotCell
                     key={kind}
                     kind={kind}

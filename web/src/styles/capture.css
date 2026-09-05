@@ -263,15 +263,13 @@
   color: var(--t-30);
 }
 
+/* auto-fit rather than a fixed pair: the pre-news cell is dropped on a day with
+   no release, and the reveal should take the whole row instead of sitting in a
+   half-width column beside a gap. */
 .day-shots {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 10px;
-}
-@media (max-width: 720px) {
-  .day-shots {
-    grid-template-columns: 1fr;
-  }
 }
 
 .day-reveal {
